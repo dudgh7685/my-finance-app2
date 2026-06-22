@@ -8,36 +8,47 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
     <style>
-        body { background-color: #f4f7f6; font-family: 'Pretendard', sans-serif; padding-bottom: 80px; }
+        body { background-color: #f4f7f6; font-family: 'Pretendard', -apple-system, sans-serif; padding-bottom: 80px; }
         .hide { display: none !important; }
         .tab-active { color: #3b82f6; border-top: 3px solid #3b82f6; font-weight: bold; }
         .tab-inactive { color: #9ca3af; border-top: 3px solid transparent; }
-        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .clickable-cat { cursor: pointer; transition: background-color 0.2s; padding: 4px; border-radius: 8px; }
+        .clickable-cat:hover { background-color: #f1f5f9; }
     </style>
 </head>
 <body>
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
         
-        <!-- 상단 헤더 & 파일 업로드 -->
-        <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md">
-            <h1 class="text-xl font-bold text-center mb-4">우리 부부 가계부</h1>
-            <label class="flex flex-col items-center justify-center w-full p-3 border-2 border-white border-dashed rounded-xl cursor-pointer hover:bg-blue-700 transition">
-                <span class="font-semibold text-sm">뱅크샐러드 엑셀 업로드 (.xlsx)</span>
+        <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
+            <h1 class="text-xl font-bold text-center">우리 부부 가계부</h1>
+            
+            <label class="flex flex-col items-center justify-center w-full p-2 border-2 border-white border-dashed rounded-xl cursor-pointer hover:bg-blue-700 transition">
+                <span class="font-semibold text-sm">1. 뱅샐 엑셀 업로드 (.xlsx)</span>
                 <input type="file" id="fileUpload" accept=".xlsx" class="hidden" />
             </label>
+
+            <div class="w-full">
+                <label class="text-xs font-bold mb-1 block">2. 쿠팡 구매내역 복사해 넣기 (선택)</label>
+                <textarea id="coupangText" rows="2" class="w-full text-gray-800 text-xs p-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300" placeholder="예: 2026.06.20 하기스 네이처메이드 기저귀 21,500원..."></textarea>
+                <button id="applyCoupangBtn" class="w-full mt-1 bg-blue-800 text-white text-xs py-1.5 rounded-lg hover:bg-blue-900 transition">내역 매칭하기</button>
+            </div>
         </div>
 
-        <!-- 탭 1: 월간 대시보드 -->
         <div id="tab-monthly" class="p-5 space-y-6">
             
-            <!-- 자산 현황 -->
-            <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100">
-                <p class="text-gray-500 text-sm font-medium">현재 총 자산 <span class="text-xs text-blue-500">(군인공제 포함)</span></p>
-                <h2 id="totalAsset" class="text-3xl font-bold text-gray-800 mt-1">0 원</h2>
+            <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center">
+                <div>
+                    <p class="text-gray-500 text-sm font-medium">현재 총 자산</p>
+                    <h2 id="totalAsset" class="text-3xl font-bold text-gray-800 mt-1">0 원</h2>
+                </div>
+                <div class="text-right text-xs text-gray-400">
+                    <p>+ 군인공제회</p>
+                    <p>자동 합산됨</p>
+                </div>
             </div>
 
-            <!-- 월 네비게이션 -->
             <div class="flex justify-between items-center bg-white rounded-full shadow-sm p-2 border border-gray-200">
                 <button id="prevMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">◀</button>
                 <div class="text-center">
@@ -47,86 +58,79 @@
                 <button id="nextMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">▶</button>
             </div>
 
-            <!-- 요약 (수입/지출) -->
-            <div class="flex gap-4">
-                <div class="flex-1 bg-green-50 rounded-2xl p-4 border border-green-100">
-                    <p class="text-green-600 text-xs font-bold">총 수입</p>
-                    <p id="totalIncome" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-green-50 rounded-xl p-4 border border-green-100 col-span-2">
+                    <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
+                    <p id="totalIncome" class="text-xl font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <div class="flex-1 bg-red-50 rounded-2xl p-4 border border-red-100">
-                    <p class="text-red-600 text-xs font-bold">총 지출</p>
-                    <p id="totalExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
+                <div class="bg-red-50 rounded-xl p-4 border border-red-100">
+                    <p class="text-red-600 text-xs font-bold">변동 지출</p>
+                    <p id="varExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
+                </div>
+                <div class="bg-orange-50 rounded-xl p-4 border border-orange-100">
+                    <p class="text-orange-600 text-xs font-bold">고정 지출</p>
+                    <p id="fixedExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
             </div>
 
-            <!-- 카테고리별 예산 관리 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-gray-700">카테고리별 예산 현황</h3>
-                    <button id="toggleBudgetBtn" class="text-xs text-white bg-blue-500 px-3 py-1.5 rounded-lg shadow">예산 설정하기</button>
+                    <button id="toggleBudgetBtn" class="text-xs text-white bg-blue-500 px-3 py-1.5 rounded-lg shadow">설정</button>
                 </div>
                 
-                <!-- 예산 입력 폼 (숨김 처리 기본) -->
                 <div id="budgetSetupArea" class="hide bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
-                    <div class="flex justify-between mb-2">
-                        <span class="text-sm font-bold text-gray-600">예산 설정</span>
-                        <button id="loadPrevBudgetBtn" class="text-xs text-blue-500 underline">저번 달 불러오기</button>
-                    </div>
-                    <div id="budgetInputs" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2 mb-3">
-                        <!-- JS로 동적 생성됨 -->
-                    </div>
-                    <div class="flex gap-2">
-                        <input type="text" id="newCatName" placeholder="새 카테고리" class="w-1/3 p-2 border rounded text-sm">
-                        <input type="number" id="newCatBudget" placeholder="예산 금액" class="w-1/3 p-2 border rounded text-sm">
-                        <button id="addCatBtn" class="w-1/3 bg-gray-200 text-gray-700 rounded text-sm font-bold">항목 추가</button>
-                    </div>
-                    <button id="saveBudgetBtn" class="w-full mt-3 bg-blue-600 text-white py-2 rounded-lg font-bold">저장 및 닫기</button>
+                    <div id="budgetInputs" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2 mb-3"></div>
+                    <button id="saveBudgetBtn" class="w-full mt-2 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm">저장 및 닫기</button>
                 </div>
 
-                <!-- 예산 진행률 막대 표시 영역 -->
-                <div id="budgetProgressArea" class="space-y-4">
-                    <!-- 총 예산 요약 -->
-                    <div class="pb-3 border-b border-gray-100">
-                        <div class="flex justify-between text-sm mb-1">
-                            <span class="font-bold text-gray-800">총 예산 잔액</span>
-                            <span id="totalBudgetStatus" class="font-bold text-blue-600">0원 남음</span>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5">
-                            <div id="totalBudgetBar" class="bg-blue-500 h-2.5 rounded-full" style="width: 0%"></div>
-                        </div>
-                    </div>
-                    <!-- 개별 카테고리 요약 -->
-                    <div id="categoryProgressList" class="space-y-3">
-                        <!-- JS로 동적 생성됨 -->
-                        <p class="text-xs text-center text-gray-400">우측 상단의 '예산 설정하기'를 눌러 예산을 입력하세요.</p>
-                    </div>
+                <div id="categoryProgressList" class="space-y-3">
+                    <p class="text-xs text-center text-gray-400">데이터가 없습니다.</p>
                 </div>
             </div>
 
-            <!-- 생키 다이어그램 -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-2">이번 달 자금 흐름도</h3>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
+                <h3 class="font-bold text-gray-700 mb-2">지출 흐름도</h3>
                 <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-700">지출 상세 내역</h3>
+                    <select id="tableFilter" class="text-xs p-1 border rounded bg-gray-50 outline-none">
+                        <option value="전체">전체 보기</option>
+                    </select>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-left text-xs whitespace-nowrap">
+                        <thead class="bg-gray-100 text-gray-600">
+                            <tr>
+                                <th class="p-2 rounded-l-lg">날짜</th>
+                                <th class="p-2">카테고리</th>
+                                <th class="p-2">결제처(내용)</th>
+                                <th class="p-2 text-right rounded-r-lg">금액</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactionTableBody" class="divide-y divide-gray-100">
+                            <tr><td colspan="4" class="p-4 text-center text-gray-400">엑셀을 업로드해주세요.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- 탭 2: 연간 결산 -->
         <div id="tab-annual" class="p-5 space-y-6 hide">
             <h2 class="text-2xl font-bold text-gray-800 mb-2">연간 결산 리포트</h2>
-            <p class="text-sm text-gray-500 mb-4">최근 12개월간의 수입/지출 전체 흐름입니다.</p>
-            
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-700 mb-2">월별 추이</h3>
                 <div id="annualBarChart" style="width: 100%; height: 250px;"></div>
             </div>
-
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-700 mb-2">지출 카테고리 TOP</h3>
                 <div id="annualPieChart" style="width: 100%; height: 300px;"></div>
             </div>
         </div>
 
-        <!-- 하단 네비게이션 -->
         <div class="fixed bottom-0 w-full max-w-md bg-white border-t flex text-center text-sm shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
             <button id="navMonthly" class="flex-1 py-4 tab-active">월간 대시보드</button>
             <button id="navAnnual" class="flex-1 py-4 tab-inactive">연간 결산</button>
@@ -136,15 +140,19 @@
     <script>
         let globalData = [];
         let globalAssets = 0;
-        let currentDate = new Date(2026, 5, 1); // 시작 기준월: 2026년 6월
-        let currentMonthExpenses = {}; // 카테고리별 지출액 저장용
+        let currentDate = new Date(2026, 5, 1); // 2026년 6월
+        let currentMonthExpenses = {}; 
+        let currentFilteredData = [];
+        let coupangMatches = []; // 파싱된 쿠팡 데이터
 
-        // 차트 객체
-        let sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
-        let annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
-        let annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
+        // 고정 지출 카테고리 정의
+        const FIXED_CATEGORIES = ['주거/통신', '금융/보험', '교육'];
 
-        // 하단 탭 로직
+        const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
+        const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
+        const annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
+
+        // 탭 전환
         document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
         document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
 
@@ -156,7 +164,7 @@
             setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
         }
 
-        // 파일 파싱
+        // 파일 업로드
         document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -164,242 +172,269 @@
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
 
-                parseAssetsSafely(workbook.Sheets['뱅샐현황']);
+                parseExactAssets(workbook.Sheets['뱅샐현황']);
                 globalData = XLSX.utils.sheet_to_json(workbook.Sheets['가계부 내역']);
                 updateDashboard();
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // 1. 자산 이중 합산 방지 파싱 로직
-        function parseAssetsSafely(sheet) {
+        // 1. 자산 정확히 합산하기 (4억 문제 해결)
+        function parseExactAssets(sheet) {
             if (!sheet) return;
             const data = XLSX.utils.sheet_to_json(sheet, {header: 1});
-            
-            // Step 1: 투자현황에서 개별 주식/ETF 종목 이름 수집
-            let investmentItems = new Set();
-            let inInvestmentSection = false;
+            let total = 0;
+            let inFinance = false;
+
             for (let row of data) {
-                if (row[1] === '5.투자현황') inInvestmentSection = true;
-                if (row[1] === '6.대출현황') break;
-                if (inInvestmentSection && row[3]) {
-                    investmentItems.add(String(row[3]).trim());
+                if (row[1] === '3.재무현황') { inFinance = true; continue; }
+                if (row[1] === '4.보험현황') break; // 4.보험현황 만나면 종료 (5.투자현황 아예 무시)
+
+                // 3.재무현황 구역 안에서, 금액(인덱스4)이 숫자인 것만 전부 더함.
+                if (inFinance && row[4] !== undefined && !isNaN(row[4])) {
+                    total += Number(row[4]);
                 }
             }
+            globalAssets = total;
+        }
 
-            // Step 2: 재무현황 합산 시 수집한 종목 이름 필터링
-            let totalParsed = 0;
-            let inFinanceSection = false;
-            for (let row of data) {
-                if (row[1] === '3.재무현황') { inFinanceSection = true; continue; }
-                if (row[1] === '4.보험현황' || row[1] === '5.투자현황') break;
+        // 2. 군인공제 가산 로직
+        function getMilitaryAidAsset(y, m) {
+            const diff = (y - 2026) * 12 + (m - 6);
+            return 11900000 + (diff * 55000);
+        }
 
-                if (inFinanceSection && row[4] !== undefined && !isNaN(row[4])) {
-                    let itemName = String(row[2] || row[3] || "").trim();
-                    if (!investmentItems.has(itemName)) {
-                        totalParsed += Number(row[4]);
+        // 3. 쿠팡 텍스트 파싱 및 매칭
+        document.getElementById('applyCoupangBtn').addEventListener('click', () => {
+            const text = document.getElementById('coupangText').value;
+            if(!text) return;
+            
+            // 단순 파서: 줄바꿈으로 나누고, 날짜(MM.DD 또는 YYYY.MM.DD) 형태를 찾아 아이템명 추출
+            const lines = text.split('\n');
+            coupangMatches = [];
+            
+            lines.forEach(line => {
+                // 정규식: 2026.06.20 또는 06/20 등 날짜 패턴 찾기
+                const dateMatch = line.match(/(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/);
+                if(dateMatch) {
+                    // 날짜 제외한 나머지 텍스트를 아이템으로 간주
+                    let itemDesc = line.replace(dateMatch[0], '').replace(/[0-9,]+원?/, '').trim();
+                    if(itemDesc) {
+                        coupangMatches.push({
+                            month: parseInt(dateMatch[2]),
+                            day: parseInt(dateMatch[3]),
+                            item: itemDesc.substring(0, 15) // 너무 길면 자름
+                        });
                     }
                 }
-            }
-            globalAssets = totalParsed; // 순수 파싱 자산
-        }
+            });
+            alert(`${coupangMatches.length}건의 쿠팡 내역이 임시 매칭되었습니다.\n표에 태그가 반영됩니다.`);
+            updateDashboard();
+        });
 
-        // 2. 군인공제회 자동 가산 로직
-        function getMilitaryAidAsset(viewYear, viewMonth) {
-            // 기준: 2026년 6월 = 11,900,000원. 매월 10일 기준.
-            const baseYear = 2026;
-            const baseMonth = 6;
-            const baseAmount = 11900000;
-            const monthlyAdd = 55000;
-
-            const diffMonths = (viewYear - baseYear) * 12 + (viewMonth - baseMonth);
-            return baseAmount + (diffMonths * monthlyAdd);
-        }
-
-        // 대시보드 업데이트
+        // 네비게이션
         document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); updateDashboard(); });
         document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); updateDashboard(); });
 
+        // 메인 업데이트 로직
         function updateDashboard() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1;
+            if(globalData.length === 0) return;
+
+            const y = currentDate.getFullYear();
+            const m = currentDate.getMonth() + 1;
             
-            document.getElementById('currentMonthLabel').innerText = `${year}년 ${month}월`;
-            let prevM = String(month).padStart(2, '0');
-            let nextM = String(month === 12 ? 1 : month + 1).padStart(2, '0');
+            document.getElementById('currentMonthLabel').innerText = `${y}년 ${m}월`;
+            let prevM = String(m).padStart(2, '0');
+            let nextM = String(m === 12 ? 1 : m + 1).padStart(2, '0');
             document.getElementById('cycleLabel').innerText = `(${prevM}.10 ~ ${nextM}.09)`;
 
-            // 군인공제회 + 파싱자산 화면 표시
-            const totalWithAid = globalAssets + getMilitaryAidAsset(year, month);
-            document.getElementById('totalAsset').innerText = totalWithAid.toLocaleString() + ' 원';
+            document.getElementById('totalAsset').innerText = (globalAssets + getMilitaryAidAsset(y, m)).toLocaleString() + ' 원';
 
-            // 매월 10일 ~ 익월 9일 필터링
-            const startDate = new Date(year, month - 1, 10, 0, 0, 0);
-            const endDate = new Date(year, month, 9, 23, 59, 59);
+            const startDate = new Date(y, m - 1, 10, 0, 0, 0);
+            const endDate = new Date(y, m, 9, 23, 59, 59);
 
-            let income = 0;
-            let expense = 0;
-            currentMonthExpenses = {}; // 카테고리 맵 리셋
+            let income = 0; let fixedExp = 0; let varExp = 0;
+            currentMonthExpenses = {}; 
+            currentFilteredData = [];
+            
+            // 필터용 드롭다운 옵션 리셋
+            let catSet = new Set(['전체']);
 
             globalData.forEach(row => {
-                let dateObj = new Date(row['날짜']);
-                if (typeof row['날짜'] === 'number') dateObj = new Date(Math.round((row['날짜'] - 25569) * 86400 * 1000));
+                let dStr = row['날짜'];
+                let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
                 
                 if (dateObj >= startDate && dateObj <= endDate) {
-                    const type = row['타입'];
+                    let type = row['타입'];
+                    let cat = row['대분류'] || '미분류';
                     let amount = Number(row['금액']);
-                    if (isNaN(amount)) return;
+                    if (isNaN(amount) || type === '이체') return; // 이체는 무시
+
+                    // 4. 환불 상계 로직 (Refund Matching)
+                    // 수입인데 카테고리가 전형적인 지출항목인 경우 지출 마이너스로 처리
+                    if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) {
+                        type = '지출';
+                        amount = -amount; // 지출에서 빼기 위해 음수 변환
+                    }
 
                     if (type === '수입') {
                         income += amount;
                     } else if (type === '지출') {
                         amount = Math.abs(amount);
-                        expense += amount;
-                        const cat = row['대분류'] || '미분류';
+                        
+                        // 고정/변동 분리
+                        if (FIXED_CATEGORIES.includes(cat)) fixedExp += amount;
+                        else varExp += amount;
+
                         currentMonthExpenses[cat] = (currentMonthExpenses[cat] || 0) + amount;
+                        catSet.add(cat);
+
+                        // 쿠팡 태그 매칭 로직
+                        let desc = String(row['내용']);
+                        if(desc.includes('쿠팡') && coupangMatches.length > 0) {
+                            let rMonth = dateObj.getMonth() + 1;
+                            let rDay = dateObj.getDate();
+                            // 같은 날짜의 쿠팡 내역이 있다면 태그 추가
+                            let match = coupangMatches.find(c => c.month === rMonth && c.day === rDay);
+                            if(match) desc = `<span class="text-blue-600 font-bold">[${match.item}]</span> ` + desc;
+                        }
+
+                        // 표 렌더링을 위한 데이터 적재
+                        currentFilteredData.push({
+                            date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`,
+                            cat: cat,
+                            desc: desc,
+                            amount: amount
+                        });
                     }
                 }
             });
 
             document.getElementById('totalIncome').innerText = income.toLocaleString() + ' 원';
-            document.getElementById('totalExpense').innerText = expense.toLocaleString() + ' 원';
+            document.getElementById('fixedExpense').innerText = fixedExp.toLocaleString() + ' 원';
+            document.getElementById('varExpense').innerText = varExp.toLocaleString() + ' 원';
 
-            renderSankey(income, expense, currentMonthExpenses);
-            renderBudgetUI(year, month);
+            // 필터 옵션 채우기
+            const filterEl = document.getElementById('tableFilter');
+            filterEl.innerHTML = '';
+            catSet.forEach(c => {
+                filterEl.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+
+            renderBudgetUI(y, m);
+            renderSankey(income, fixedExp + varExp, currentMonthExpenses);
+            renderTable('전체');
         }
 
-        // 3. 카테고리별 예산 시스템
-        const budgetKey = (y, m) => `budget_cats_${y}_${m}`;
+        // 표 렌더링 함수
+        function renderTable(filterCat) {
+            document.getElementById('tableFilter').value = filterCat;
+            const tbody = document.getElementById('transactionTableBody');
+            tbody.innerHTML = '';
+            
+            const filtered = filterCat === '전체' ? currentFilteredData : currentFilteredData.filter(d => d.cat === filterCat);
+            
+            if(filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">내역이 없습니다.</td></tr>`;
+                return;
+            }
 
+            // 최신 날짜순 정렬
+            filtered.sort((a,b) => {
+                let ad = a.date.split('/'); let bd = b.date.split('/');
+                return (bd[0]-ad[0]) || (bd[1]-ad[1]);
+            });
+
+            filtered.forEach(row => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                        <td class="p-2 text-gray-500">${row.date}</td>
+                        <td class="p-2"><span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[10px]">${row.cat}</span></td>
+                        <td class="p-2 text-gray-800 truncate max-w-[120px]">${row.desc}</td>
+                        <td class="p-2 text-right font-bold text-red-500">-${row.amount.toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 드롭다운 변경 시 표 리렌더링
+        document.getElementById('tableFilter').addEventListener('change', (e) => {
+            renderTable(e.target.value);
+        });
+
+        // 카테고리를 터치하면 해당 카테고리로 필터링하게 하는 함수
+        window.filterByCategory = function(cat) {
+            renderTable(cat);
+            // 표 위치로 부드럽게 스크롤
+            document.getElementById('tableFilter').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // 예산 UI
         document.getElementById('toggleBudgetBtn').addEventListener('click', () => {
             const area = document.getElementById('budgetSetupArea');
-            if (area.classList.contains('hide')) {
-                area.classList.remove('hide');
-                buildBudgetForm(currentDate.getFullYear(), currentDate.getMonth() + 1);
-            } else {
-                area.classList.add('hide');
-            }
+            area.classList.toggle('hide');
+            if(!area.classList.contains('hide')) buildBudgetForm(currentDate.getFullYear(), currentDate.getMonth() + 1);
         });
 
         function buildBudgetForm(y, m) {
-            const saved = JSON.parse(localStorage.getItem(budgetKey(y, m))) || {};
-            // 현재 지출이 발생한 카테고리와 기존 설정된 카테고리 병합
+            const key = `budget_${y}_${m}`;
+            const saved = JSON.parse(localStorage.getItem(key)) || {};
             const allCats = Array.from(new Set([...Object.keys(currentMonthExpenses), ...Object.keys(saved)]));
             
             const container = document.getElementById('budgetInputs');
             container.innerHTML = '';
             
             allCats.forEach(cat => {
-                const val = saved[cat] || '';
                 container.innerHTML += `
                     <div class="flex items-center gap-2 mb-2">
-                        <span class="w-1/3 text-sm font-medium text-gray-700 truncate">${cat}</span>
-                        <input type="number" data-cat="${cat}" value="${val}" placeholder="예산액" class="budget-cat-input w-2/3 p-1.5 border rounded text-sm">
+                        <span class="w-1/3 text-sm font-medium">${cat}</span>
+                        <input type="number" data-cat="${cat}" value="${saved[cat]||''}" class="budget-input w-2/3 p-1.5 border rounded text-sm">
                     </div>
                 `;
             });
         }
 
-        // 새 항목 수동 추가
-        document.getElementById('addCatBtn').addEventListener('click', () => {
-            const catName = document.getElementById('newCatName').value.trim();
-            const catAmt = document.getElementById('newCatBudget').value.trim();
-            if(!catName) return;
-            const container = document.getElementById('budgetInputs');
-            container.innerHTML += `
-                <div class="flex items-center gap-2 mb-2">
-                    <span class="w-1/3 text-sm font-medium text-gray-700 truncate">${catName}</span>
-                    <input type="number" data-cat="${catName}" value="${catAmt}" placeholder="예산액" class="budget-cat-input w-2/3 p-1.5 border rounded text-sm">
-                </div>
-            `;
-            document.getElementById('newCatName').value = '';
-            document.getElementById('newCatBudget').value = '';
-        });
-
-        // 예산 저장
         document.getElementById('saveBudgetBtn').addEventListener('click', () => {
-            let newData = {};
-            document.querySelectorAll('.budget-cat-input').forEach(input => {
-                let val = Number(input.value);
-                if(val > 0) newData[input.getAttribute('data-cat')] = val;
+            let data = {};
+            document.querySelectorAll('.budget-input').forEach(input => {
+                if(Number(input.value) > 0) data[input.getAttribute('data-cat')] = Number(input.value);
             });
-            localStorage.setItem(budgetKey(currentDate.getFullYear(), currentDate.getMonth() + 1), JSON.stringify(newData));
+            localStorage.setItem(`budget_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}`, JSON.stringify(data));
             document.getElementById('budgetSetupArea').classList.add('hide');
             updateDashboard();
         });
 
-        // 저번달 불러오기
-        document.getElementById('loadPrevBudgetBtn').addEventListener('click', () => {
-            let prevDate = new Date(currentDate);
-            prevDate.setMonth(prevDate.getMonth() - 1);
-            let prevData = localStorage.getItem(budgetKey(prevDate.getFullYear(), prevDate.getMonth() + 1));
-            if(prevData) {
-                localStorage.setItem(budgetKey(currentDate.getFullYear(), currentDate.getMonth() + 1), prevData);
-                buildBudgetForm(currentDate.getFullYear(), currentDate.getMonth() + 1);
-            } else {
-                alert('저번 달 예산 설정 내역이 없습니다.');
-            }
-        });
-
-        // 예산 진행률 화면 렌더링
         function renderBudgetUI(y, m) {
-            const saved = JSON.parse(localStorage.getItem(budgetKey(y, m))) || {};
-            const listContainer = document.getElementById('categoryProgressList');
-            listContainer.innerHTML = '';
+            const saved = JSON.parse(localStorage.getItem(`budget_${y}_${m}`)) || {};
+            const container = document.getElementById('categoryProgressList');
+            container.innerHTML = '';
 
-            let totalBudget = 0;
-            let totalSpentInBudgetedCats = 0;
-            
-            const catsToRender = Object.keys(saved);
-            if(catsToRender.length === 0) {
-                listContainer.innerHTML = `<p class="text-xs text-center text-gray-400">우측 상단의 '예산 설정하기'를 눌러주세요.</p>`;
-                document.getElementById('totalBudgetStatus').innerText = "0원 남음";
-                document.getElementById('totalBudgetBar').style.width = "0%";
-                return;
-            }
-
-            catsToRender.forEach(cat => {
+            let hasBudget = false;
+            Object.keys(saved).forEach(cat => {
+                hasBudget = true;
                 let budget = saved[cat];
                 let spent = currentMonthExpenses[cat] || 0;
-                let remain = budget - spent;
                 let percent = Math.min((spent / budget) * 100, 100);
+                let color = percent < 80 ? 'bg-green-500' : (percent < 100 ? 'bg-yellow-400' : 'bg-red-500');
                 
-                totalBudget += budget;
-                totalSpentInBudgetedCats += spent;
-
-                let color = percent < 80 ? 'bg-green-500' : (percent <= 100 ? 'bg-yellow-400' : 'bg-red-500');
-                let remainText = remain >= 0 ? `${remain.toLocaleString()}원 남음` : `<span class="text-red-500">${Math.abs(remain).toLocaleString()}원 초과!</span>`;
-
-                listContainer.innerHTML += `
-                    <div>
+                // div에 onclick 이벤트를 추가하여 터치 시 filterByCategory 실행!
+                container.innerHTML += `
+                    <div class="clickable-cat" onclick="filterByCategory('${cat}')">
                         <div class="flex justify-between text-xs mb-1">
-                            <span class="text-gray-600">${cat} <span class="text-gray-400">(${budget.toLocaleString()}원)</span></span>
-                            <span class="font-bold">${remainText}</span>
+                            <span class="text-gray-700 font-bold">${cat} <span class="font-normal text-gray-400">(${budget.toLocaleString()})</span></span>
+                            <span>${spent.toLocaleString()} / ${Math.floor(percent)}%</span>
                         </div>
-                        <div class="w-full bg-gray-100 rounded-full h-1.5">
-                            <div class="${color} h-1.5 rounded-full" style="width: ${percent}%"></div>
+                        <div class="w-full bg-gray-100 rounded-full h-2">
+                            <div class="${color} h-2 rounded-full" style="width: ${percent}%"></div>
                         </div>
                     </div>
                 `;
             });
-
-            // 총 예산 잔액 업데이트
-            let totalRemain = totalBudget - totalSpentInBudgetedCats;
-            let totalPercent = Math.min((totalSpentInBudgetedCats / totalBudget) * 100, 100);
-            let tColor = totalPercent < 80 ? 'bg-blue-500' : (totalPercent <= 100 ? 'bg-yellow-500' : 'bg-red-500');
-            
-            document.getElementById('totalBudgetStatus').innerHTML = totalRemain >= 0 ? `${totalRemain.toLocaleString()}원 남음` : `<span class="text-red-500">${Math.abs(totalRemain).toLocaleString()}원 초과</span>`;
-            const tBar = document.getElementById('totalBudgetBar');
-            tBar.className = `${tColor} h-2.5 rounded-full transition-all duration-500`;
-            tBar.style.width = `${totalPercent}%`;
+            if(!hasBudget) container.innerHTML = `<p class="text-xs text-center text-gray-400">예산을 설정해주세요.</p>`;
         }
 
-        // 4. 생키 다이어그램 렌더링 (글자 잘림 수정)
         function renderSankey(income, expense, categories) {
-            if (income === 0 && expense === 0) {
-                sankeyInstance.clear();
-                return;
-            }
+            if (income === 0 && expense === 0) { sankeyInstance.clear(); return; }
 
             let nodes = [{name: '수입'}, {name: '지출'}];
             let links = [];
@@ -408,91 +443,59 @@
             if (remaining > 0) {
                 nodes.push({name: '잔여/저축'});
                 links.push({source: '수입', target: '잔여/저축', value: remaining});
-            } else if (remaining < 0) {
-                nodes.push({name: '초과지출'});
-                links.push({source: '초과지출', target: '지출', value: Math.abs(remaining)});
             }
-            if (income > 0) links.push({source: '수입', target: '지출', value: income >= expense ? expense : income});
+            if (income > 0) links.push({source: '수입', target: '지출', value: Math.min(income, expense)});
 
-            // Zero-width space(\u200B)를 추가하여 노드 이름 중복 방지 (화면엔 안보임)
             for (const [cat, val] of Object.entries(categories)) {
-                let catNode = cat + '\u200B';
-                nodes.push({name: catNode});
-                links.push({source: '지출', target: catNode, value: val});
+                let nodeName = cat + '\u200B'; // 이름 중복 방지 보이지 않는 공백 추가
+                nodes.push({name: nodeName});
+                links.push({source: '지출', target: nodeName, value: val});
             }
 
-            const option = {
-                tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+            sankeyInstance.setOption({
+                tooltip: { trigger: 'item' },
                 series: {
-                    type: 'sankey',
-                    layout: 'none',
-                    // 우측 마진을 대폭 늘려(25%) 카테고리 글자가 안 잘리게 방어
-                    right: '25%', 
-                    emphasis: { focus: 'adjacency' },
-                    data: nodes,
-                    links: links,
+                    type: 'sankey', layout: 'none', right: '30%', // 글자 안잘리게 우측 여백 30% 확충
+                    data: nodes, links: links,
                     lineStyle: { color: 'gradient', curveness: 0.5 },
                     label: { fontSize: 11, color: '#333' }
                 }
-            };
-            sankeyInstance.setOption(option, true);
+            }, true);
         }
 
-        // 연간 결산 로직 (그대로 유지하되 회계일 기준 10일 적용)
         function renderAnnual() {
+            // (연간 차트는 이전과 동일한 로직 유지)
             if(globalData.length === 0) return;
-            let monthlyStats = {};
-            let totalCats = {};
-
+            let monthlyStats = {}; let totalCats = {};
             globalData.forEach(row => {
-                let dateObj = new Date(row['날짜']);
-                if (typeof row['날짜'] === 'number') dateObj = new Date(Math.round((row['날짜'] - 25569) * 86400 * 1000));
-                
-                let y = dateObj.getFullYear();
-                let m = dateObj.getMonth() + 1;
-                let d = dateObj.getDate();
+                let dStr = row['날짜'];
+                let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
+                let y = dateObj.getFullYear(); let m = dateObj.getMonth() + 1; let d = dateObj.getDate();
                 if (d < 10) { m -= 1; if (m === 0) { m = 12; y -= 1; } }
-
-                let cycleKey = `${y}-${String(m).padStart(2, '0')}`;
-                if (!monthlyStats[cycleKey]) monthlyStats[cycleKey] = { income: 0, expense: 0 };
-
-                const type = row['타입'];
-                let amount = Number(row['금액']);
-                if (isNaN(amount)) return;
-
-                if (type === '수입') {
-                    monthlyStats[cycleKey].income += amount;
-                } else if (type === '지출') {
-                    amount = Math.abs(amount);
-                    monthlyStats[cycleKey].expense += amount;
-                    const cat = row['대분류'] || '미분류';
-                    totalCats[cat] = (totalCats[cat] || 0) + amount;
-                }
+                let key = `${y}-${String(m).padStart(2,'0')}`;
+                if(!monthlyStats[key]) monthlyStats[key] = {inc:0, exp:0};
+                
+                let type = row['타입']; let amount = Number(row['금액']);
+                if(isNaN(amount) || type === '이체') return;
+                
+                if (type === '수입') monthlyStats[key].inc += amount;
+                else { amount = Math.abs(amount); monthlyStats[key].exp += amount; totalCats[row['대분류']||'미분류'] = (totalCats[row['대분류']||'미분류']||0) + amount; }
             });
 
-            const sortedKeys = Object.keys(monthlyStats).sort().slice(-12);
-            const barOption = {
-                tooltip: { trigger: 'axis' },
-                legend: { data: ['수입', '지출'] },
-                xAxis: { type: 'category', data: sortedKeys.map(k => k.substring(2)) },
-                yAxis: { type: 'value', show: false },
+            let keys = Object.keys(monthlyStats).sort().slice(-12);
+            annualBarInstance.setOption({
+                tooltip: { trigger: 'axis' }, legend: { data: ['수입', '지출'] },
+                xAxis: { type: 'category', data: keys.map(k=>k.substring(2)) }, yAxis: { show: false },
                 series: [
-                    { name: '수입', type: 'bar', data: sortedKeys.map(k => monthlyStats[k].income), itemStyle: {color: '#34d399'} },
-                    { name: '지출', type: 'bar', data: sortedKeys.map(k => monthlyStats[k].expense), itemStyle: {color: '#f87171'} }
+                    { name: '수입', type: 'bar', data: keys.map(k=>monthlyStats[k].inc), itemStyle: {color: '#34d399'} },
+                    { name: '지출', type: 'bar', data: keys.map(k=>monthlyStats[k].exp), itemStyle: {color: '#f87171'} }
                 ]
-            };
-            annualBarInstance.setOption(barOption);
-
-            let pieData = Object.keys(totalCats).map(key => ({ name: key, value: totalCats[key] })).sort((a, b) => b.value - a.value);
-            const pieOption = {
+            });
+            let pieData = Object.keys(totalCats).map(k=>({name:k, value:totalCats[k]})).sort((a,b)=>b.value-a.value).slice(0,7);
+            annualPieInstance.setOption({
                 tooltip: { trigger: 'item' },
-                series: [{
-                    type: 'pie', radius: ['40%', '70%'],
-                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
-                    data: pieData.slice(0, 7)
-                }]
-            };
-            annualPieInstance.setOption(pieOption);
+                series: [{ type: 'pie', radius: ['40%', '70%'], data: pieData }]
+            });
         }
     </script>
 </body>
