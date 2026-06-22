@@ -21,7 +21,6 @@
 <body>
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
         
-        <!-- 상단 헤더 & 업로드 섹션 -->
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
             <h1 class="text-xl font-bold text-center">우리 부부 가계부</h1>
             
@@ -37,10 +36,8 @@
             </div>
         </div>
 
-        <!-- 탭 1: 월간 대시보드 -->
         <div id="tab-monthly" class="p-5 space-y-6">
             
-            <!-- 자산 현황 -->
             <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
                     <p class="text-gray-500 text-sm font-medium">현재 총 자산</p>
@@ -52,7 +49,6 @@
                 </div>
             </div>
 
-            <!-- 월 네비게이션 -->
             <div class="flex justify-between items-center bg-white rounded-full shadow-sm p-2 border border-gray-200">
                 <button id="prevMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">◀</button>
                 <div class="text-center">
@@ -62,7 +58,6 @@
                 <button id="nextMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">▶</button>
             </div>
 
-            <!-- 요약 (고정/변동 분리 & 환불 상계 적용) -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-green-50 rounded-xl p-4 border border-green-100 col-span-2">
                     <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
@@ -78,7 +73,6 @@
                 </div>
             </div>
 
-            <!-- 카테고리별 예산 관리 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-gray-700">카테고리별 예산 현황</h3>
@@ -95,17 +89,15 @@
                 </div>
             </div>
 
-            <!-- 생키 다이어그램 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
                 <h3 class="font-bold text-gray-700 mb-2">이번 달 지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트를 터치해보세요)</span></h3>
                 <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
             </div>
 
-            <!-- 지출 내역 표 (필터 연동) -->
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100" id="transactionTableSection">
                 <div class="flex justify-between items-center mb-3">
                     <h3 class="font-bold text-gray-700">지출 상세 내역</h3>
-                    <select id="tableFilter" class="text-xs p-1 border rounded bg-gray-50 outline-none">
+                    <select id="tableFilter" class="text-xs p-1 border rounded bg-gray-50 outline-none font-bold text-blue-600">
                         <option value="전체">전체 보기</option>
                     </select>
                 </div>
@@ -127,7 +119,6 @@
             </div>
         </div>
 
-        <!-- 탭 2: 연간 결산 -->
         <div id="tab-annual" class="p-5 space-y-6 hide">
             <h2 class="text-2xl font-bold text-gray-800 mb-2">연간 결산 리포트</h2>
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -186,38 +177,44 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // ⭐ 완벽하게 수정한 자산 파싱 로직 (빈칸 무시하고 정확히 합산)
+        // ⭐ 완벽하게 갈아엎은 자산 스캔 로직 (빈칸 절대 무시 안함)
         function parseExactAssets(sheet) {
             if (!sheet) return;
-            // defval: "" 를 주어 배열이 밀리는 현상을 원천 차단
-            const data = XLSX.utils.sheet_to_json(sheet, {header: 1, defval: ""});
+            const data = XLSX.utils.sheet_to_json(sheet, {header: 1});
             let total = 0;
             let inFinance = false;
 
-            for (let row of data) {
-                let rowStr = row.join('');
+            for (let i = 0; i < data.length; i++) {
+                let row = data[i];
+                if (!row) continue;
+                
+                // 데이터를 통째로 JSON 문자열로 바꿔서 스캔하므로 엑셀 칸이 아무리 밀려도 100% 탐지함
+                let rowStr = JSON.stringify(row).replace(/\s+/g, '');
+                
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
-                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황')) break;
+                // 4.보험현황이나 5.투자현황이 나오면 자산 구간 끝
+                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황')) { break; }
 
                 if (inFinance) {
-                    // 금액은 E열(인덱스 4)에 무조건 고정됨
-                    let val = parseFloat(String(row[4]).replace(/,/g, ''));
-                    // 엑셀에서 값이 존재하고, 0보다 크면 무조건 합산 (이중합산 방지 위해 하위항목만 픽업)
-                    if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산')) {
-                        total += val;
+                    // 금액은 E열(인덱스 4)에 있음.
+                    let valRaw = row[4];
+                    if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
+                        let val = parseFloat(String(valRaw).replace(/,/g, ''));
+                        // 요약행(총자산, 순자산 등)은 제외하고 모든 항목의 숫자를 쓸어 담음
+                        if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
+                            total += val;
+                        }
                     }
                 }
             }
             globalAssets = total;
         }
 
-        // 군인공제 가산 (26년 6월 1190만 기준, 매월 5.5만)
         function getMilitaryAidAsset(y, m) {
             const diff = (y - 2026) * 12 + (m - 6);
             return 11900000 + (diff * 55000);
         }
 
-        // 쿠팡 텍스트 파싱
         document.getElementById('applyCoupangBtn').addEventListener('click', () => {
             const text = document.getElementById('coupangText').value;
             if(!text) return;
@@ -232,7 +229,7 @@
                     }
                 }
             });
-            alert(`${coupangMatches.length}건의 내역이 매칭되었습니다.`);
+            alert(`${coupangMatches.length}건의 쿠팡 내역이 임시 매칭되었습니다.`);
             updateDashboard();
         });
 
@@ -270,7 +267,6 @@
                     let amount = Number(row['금액']);
                     if (isNaN(amount) || type === '이체') return;
 
-                    // 환불 상계 로직
                     if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) {
                         type = '지출';
                         amount = -amount; 
@@ -311,7 +307,7 @@
             renderTable('전체');
         }
 
-        // ⭐ 표 렌더링 및 필터링 기능
+        // ⭐ 표 렌더링 함수
         function renderTable(filterCat) {
             document.getElementById('tableFilter').value = filterCat;
             const tbody = document.getElementById('transactionTableBody');
@@ -343,10 +339,19 @@
 
         document.getElementById('tableFilter').addEventListener('change', (e) => renderTable(e.target.value));
 
-        // 외부에서 표 필터 호출
+        // ⭐ 차트/예산에서 호출하는 글로벌 필터 함수
         window.filterByCategory = function(cat) {
-            renderTable(cat);
-            document.getElementById('tableFilter').scrollIntoView({ behavior: 'smooth', block: 'center' });
+            const filterEl = document.getElementById('tableFilter');
+            let exists = Array.from(filterEl.options).some(opt => opt.value === cat);
+            
+            if (exists) {
+                renderTable(cat);
+            } else {
+                renderTable('전체'); // 없는 카테고리면 전체 보기로 리셋
+            }
+            
+            // 표 영역으로 부드럽게 스크롤
+            document.getElementById('transactionTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
         document.getElementById('toggleBudgetBtn').addEventListener('click', () => {
@@ -409,7 +414,7 @@
             if(!hasBudget) container.innerHTML = `<p class="text-xs text-center text-gray-400">예산을 설정해주세요.</p>`;
         }
 
-        // ⭐ 차트 터치 이벤트 연동 (지출 클릭 시 초기화, 카테고리 클릭 시 필터링)
+        // ⭐ 생키 다이어그램 렌더링 및 터치 이벤트 연동
         function renderSankey(income, expense, categories) {
             if (income === 0 && expense === 0) { sankeyInstance.clear(); return; }
 
@@ -431,15 +436,18 @@
                 series: { type: 'sankey', layout: 'none', right: '30%', data: nodes, links: links, lineStyle: { color: 'gradient', curveness: 0.5 }, label: { fontSize: 11, color: '#333' } }
             }, true);
 
-            // 이벤트 중복 등록 방지를 위해 기존 리스너 제거 후 다시 붙임
+            // 이벤트 중복 등록을 막기 위해 기존 이벤트 리스너 제거 후 다시 붙임
             sankeyInstance.off('click');
             sankeyInstance.on('click', function (params) {
                 if (params.dataType === 'node') {
-                    let name = params.name.replace('\u200B', ''); // 공백문자 제거
-                    if (name === '지출' || name === '수입' || name === '잔여/저축') {
-                        filterByCategory('전체'); // '지출' 누르면 전체 보기로 리셋
+                    let name = params.name.replace('\u200B', ''); // 뒤에 붙인 보이지 않는 공백 제거
+                    
+                    // '지출', '수입' 등 상위 기둥을 누르면 '전체 보기'로 초기화
+                    if (name === '지출' || name === '수입' || name === '잔여/저축' || name === '초과지출') {
+                        filterByCategory('전체');
                     } else {
-                        filterByCategory(name); // 카테고리 누르면 필터링
+                        // 세부 카테고리를 누르면 해당 카테고리 표로 필터링
+                        filterByCategory(name);
                     }
                 }
             });
