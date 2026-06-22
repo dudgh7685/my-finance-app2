@@ -151,7 +151,6 @@
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
         const annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
 
-        // 탭 전환
         document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
         document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
 
@@ -163,7 +162,6 @@
             setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
         }
 
-        // 파일 업로드
         document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -177,30 +175,26 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // ⭐ 완벽하게 갈아엎은 자산 스캔 로직 (빈칸 절대 무시 안함)
+        // ⭐ 완전무결한 절대좌표 자산 스캔 로직 (엑셀 빈칸으로 인한 밀림 완벽 차단)
         function parseExactAssets(sheet) {
             if (!sheet) return;
-            const data = XLSX.utils.sheet_to_json(sheet, {header: 1});
+            // {header: "A"} 속성을 주면 엑셀 칸이 아무리 비어있어도 무조건 A, B, C, D, E 고정 좌표로 강제 할당합니다.
+            const data = XLSX.utils.sheet_to_json(sheet, {header: "A", defval: ""});
             let total = 0;
             let inFinance = false;
 
             for (let i = 0; i < data.length; i++) {
                 let row = data[i];
-                if (!row) continue;
-                
-                // 데이터를 통째로 JSON 문자열로 바꿔서 스캔하므로 엑셀 칸이 아무리 밀려도 100% 탐지함
                 let rowStr = JSON.stringify(row).replace(/\s+/g, '');
                 
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
-                // 4.보험현황이나 5.투자현황이 나오면 자산 구간 끝
-                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황')) { break; }
+                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) { break; }
 
                 if (inFinance) {
-                    // 금액은 E열(인덱스 4)에 있음.
-                    let valRaw = row[4];
-                    if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
-                        let val = parseFloat(String(valRaw).replace(/,/g, ''));
-                        // 요약행(총자산, 순자산 등)은 제외하고 모든 항목의 숫자를 쓸어 담음
+                    // 자산 금액은 무조건 'E열'에 고정되어 있습니다. (이중합산, 0원 처리 원천 차단)
+                    let valRaw = row["E"];
+                    if (valRaw !== undefined && valRaw !== "") {
+                        let val = Number(String(valRaw).replace(/,/g, ''));
                         if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
                             total += val;
                         }
@@ -229,7 +223,7 @@
                     }
                 }
             });
-            alert(`${coupangMatches.length}건의 쿠팡 내역이 임시 매칭되었습니다.`);
+            alert(`${coupangMatches.length}건의 쿠팡 내역이 매칭되었습니다.`);
             updateDashboard();
         });
 
@@ -307,7 +301,6 @@
             renderTable('전체');
         }
 
-        // ⭐ 표 렌더링 함수
         function renderTable(filterCat) {
             document.getElementById('tableFilter').value = filterCat;
             const tbody = document.getElementById('transactionTableBody');
@@ -339,18 +332,14 @@
 
         document.getElementById('tableFilter').addEventListener('change', (e) => renderTable(e.target.value));
 
-        // ⭐ 차트/예산에서 호출하는 글로벌 필터 함수
         window.filterByCategory = function(cat) {
             const filterEl = document.getElementById('tableFilter');
             let exists = Array.from(filterEl.options).some(opt => opt.value === cat);
-            
             if (exists) {
                 renderTable(cat);
             } else {
-                renderTable('전체'); // 없는 카테고리면 전체 보기로 리셋
+                renderTable('전체');
             }
-            
-            // 표 영역으로 부드럽게 스크롤
             document.getElementById('transactionTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -414,7 +403,7 @@
             if(!hasBudget) container.innerHTML = `<p class="text-xs text-center text-gray-400">예산을 설정해주세요.</p>`;
         }
 
-        // ⭐ 생키 다이어그램 렌더링 및 터치 이벤트 연동
+        // ⭐ 흐름도 터치 연동 (카테고리 누르면 해당 표 출력, '지출' 기둥 누르면 전체보기 초기화)
         function renderSankey(income, expense, categories) {
             if (income === 0 && expense === 0) { sankeyInstance.clear(); return; }
 
@@ -436,17 +425,15 @@
                 series: { type: 'sankey', layout: 'none', right: '30%', data: nodes, links: links, lineStyle: { color: 'gradient', curveness: 0.5 }, label: { fontSize: 11, color: '#333' } }
             }, true);
 
-            // 이벤트 중복 등록을 막기 위해 기존 이벤트 리스너 제거 후 다시 붙임
             sankeyInstance.off('click');
             sankeyInstance.on('click', function (params) {
                 if (params.dataType === 'node') {
-                    let name = params.name.replace('\u200B', ''); // 뒤에 붙인 보이지 않는 공백 제거
+                    let name = params.name.replace('\u200B', ''); 
                     
-                    // '지출', '수입' 등 상위 기둥을 누르면 '전체 보기'로 초기화
+                    // 지출 막대 누르면 리셋, 특정 카테고리 누르면 해당 항목 필터링
                     if (name === '지출' || name === '수입' || name === '잔여/저축' || name === '초과지출') {
                         filterByCategory('전체');
                     } else {
-                        // 세부 카테고리를 누르면 해당 카테고리 표로 필터링
                         filterByCategory(name);
                     }
                 }
