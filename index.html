@@ -2,268 +2,398 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>스마트 가계부</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스마트 가계부 PWA</title>
+    <!-- Tailwind CSS (UI 디자인) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS (엑셀 파싱) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <!-- ECharts (차트 렌더링) -->
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
-    
     <style>
-        :root {
-            --primary: #4a90e2; --bg: #f4f7fb; --card: #ffffff;
-            --text-main: #333; --text-sub: #888;
-            --safe: #2ecc71; --warn: #f1c40f; --danger: #e74c3c;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background-color: var(--bg); color: var(--text-main); padding-bottom: 70px; }
-        header { background: var(--card); padding: 15px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); font-weight: bold; color: var(--primary); }
-        main { padding: 15px; max-width: 600px; margin: 0 auto; }
-        
-        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        h3 { font-size: 1.05rem; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; color: #555; }
-        
-        /* 업로드 UI */
-        .upload-btn { display: block; width: 100%; padding: 12px; background: var(--primary); color: white; text-align: center; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #upload-status { text-align: center; margin-top: 10px; font-size: 0.85rem; color: var(--text-sub); }
-        
-        /* 월간 네비게이션 */
-        .month-nav { display: flex; justify-content: space-between; align-items: center; margin: 10px 0 20px; }
-        .month-nav button { background: none; border: none; font-size: 1.5rem; color: var(--primary); cursor: pointer; padding: 0 15px; }
-        .month-nav h2 { font-size: 1.2rem; }
-        .date-range { text-align: center; font-size: 0.8rem; color: var(--text-sub); margin-top: -15px; margin-bottom: 15px; }
-        
-        /* 자산 및 예산 UI */
-        .asset-total { font-size: 1.8rem; font-weight: bold; color: var(--primary); text-align: center; margin: 10px 0; }
-        .budget-inputs { display: flex; gap: 8px; margin-bottom: 15px; }
-        .budget-inputs input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 6px; }
-        .budget-inputs button { padding: 10px; background: var(--bg); border: 1px solid #ccc; border-radius: 6px; cursor: pointer; }
-        .progress-bg { width: 100%; height: 20px; background: #eee; border-radius: 10px; overflow: hidden; }
-        .progress-bar { height: 100%; width: 0%; transition: 0.3s; }
-        #budget-text { margin-top: 8px; font-size: 0.85rem; text-align: right; }
-        
-        /* 하단 탭 */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: var(--card); display: flex; border-top: 1px solid #eee; }
-        .nav-btn { flex: 1; border: none; background: none; color: var(--text-sub); font-size: 0.95rem; cursor: pointer; }
-        .nav-btn.active { color: var(--primary); font-weight: bold; border-top: 3px solid var(--primary); }
+        body { background-color: #f4f7f6; font-family: 'Pretendard', sans-serif; padding-bottom: 80px; }
+        .hide { display: none !important; }
+        .tab-active { color: #3b82f6; border-top: 3px solid #3b82f6; font-weight: bold; }
+        .tab-inactive { color: #9ca3af; border-top: 3px solid transparent; }
     </style>
 </head>
 <body>
-
-    <header>스마트 가계부 PWA</header>
-
-    <main>
-        <div class="card">
-            <label for="excel-upload" class="upload-btn">뱅크샐러드 엑셀 파일 업로드</label>
-            <input type="file" id="excel-upload" accept=".xlsx, .xls" style="display: none;">
-            <p id="upload-status">엑셀 파일을 업로드하면 브라우저에서 즉시 분석합니다.</p>
+    <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
+        
+        <!-- 상단 헤더 & 파일 업로드 -->
+        <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md">
+            <h1 class="text-xl font-bold text-center mb-4">나만의 스마트 가계부</h1>
+            <label class="flex flex-col items-center justify-center w-full p-3 border-2 border-white border-dashed rounded-xl cursor-pointer hover:bg-blue-700 transition">
+                <span class="font-semibold text-sm">엑셀 파일 업로드 (.xlsx)</span>
+                <input type="file" id="fileUpload" accept=".xlsx" class="hidden" />
+            </label>
         </div>
 
-        <div class="month-nav">
-            <button id="prev-month">◀</button>
-            <h2 id="current-month">2026년 6월</h2>
-            <button id="next-month">▶</button>
-        </div>
-        <p class="date-range" id="date-range-text">(2026-05-10 ~ 2026-06-09)</p>
-
-        <div class="card">
-            <h3>실시간 총 자산 (뱅샐 연동 + 군인공제회)</h3>
-            <div class="asset-total" id="total-asset">0 원</div>
-        </div>
-
-        <div class="card">
-            <h3>이번 달 예산 관리</h3>
-            <div class="budget-inputs">
-                <input type="number" id="budget-input" placeholder="목표 예산 입력 (원)">
-                <button onclick="saveBudget()">저장</button>
+        <!-- 탭 1: 월간 대시보드 -->
+        <div id="tab-monthly" class="p-5 space-y-6">
+            
+            <!-- 자산 현황 -->
+            <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100">
+                <p class="text-gray-500 text-sm font-medium">현재 총 자산 (군인공제 포함)</p>
+                <h2 id="totalAsset" class="text-3xl font-bold text-gray-800 mt-1">0 원</h2>
             </div>
-            <div class="progress-bg"><div class="progress-bar" id="budget-bar"></div></div>
-            <p id="budget-text">예산을 설정해주세요.</p>
+
+            <!-- 월 네비게이션 -->
+            <div class="flex justify-between items-center bg-white rounded-full shadow-sm p-2 border border-gray-200">
+                <button id="prevMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">◀</button>
+                <div class="text-center">
+                    <h3 id="currentMonthLabel" class="font-bold text-lg text-gray-800">2026년 6월</h3>
+                    <p id="cycleLabel" class="text-xs text-gray-400">(06.10 ~ 07.09)</p>
+                </div>
+                <button id="nextMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">▶</button>
+            </div>
+
+            <!-- 예산 관리 -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="font-bold text-gray-700">이번 달 예산</h3>
+                    <div class="space-x-2">
+                        <button id="loadPrevBudget" class="text-xs text-blue-500 bg-blue-50 px-2 py-1 rounded">저번달 불러오기</button>
+                        <button id="setBudgetBtn" class="text-xs text-white bg-blue-500 px-2 py-1 rounded">저장</button>
+                    </div>
+                </div>
+                <input type="number" id="budgetInput" placeholder="목표 예산 입력 (원)" class="w-full p-2 border rounded-lg text-sm mb-3">
+                
+                <div class="relative w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div id="budgetBar" class="bg-green-500 h-4 transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <p id="budgetStatus" class="text-right text-xs text-gray-500 mt-2">예산을 설정해주세요.</p>
+            </div>
+
+            <!-- 요약 (수입/지출) -->
+            <div class="flex gap-4">
+                <div class="flex-1 bg-green-50 rounded-2xl p-4 border border-green-100">
+                    <p class="text-green-600 text-xs font-bold">총 수입</p>
+                    <p id="totalIncome" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
+                </div>
+                <div class="flex-1 bg-red-50 rounded-2xl p-4 border border-red-100">
+                    <p class="text-red-600 text-xs font-bold">총 지출</p>
+                    <p id="totalExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
+                </div>
+            </div>
+
+            <!-- 생키 다이어그램 -->
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-2">지출 흐름도</h3>
+                <div id="sankeyChart" style="width: 100%; height: 300px;"></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h3>지출 흐름도 (Sankey)</h3>
-            <div id="sankey-chart" style="width: 100%; height: 300px;"></div>
-        </div>
-    </main>
+        <!-- 탭 2: 연간 결산 -->
+        <div id="tab-annual" class="p-5 space-y-6 hide">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2">연간 결산 리포트</h2>
+            <p class="text-sm text-gray-500 mb-4">업로드된 엑셀 데이터의 전체 흐름입니다.</p>
+            
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-2">월별 수입/지출 추이</h3>
+                <div id="annualBarChart" style="width: 100%; height: 250px;"></div>
+            </div>
 
-    <nav class="bottom-nav">
-        <button class="nav-btn active">월간 대시보드</button>
-        <button class="nav-btn" onclick="alert('연간 결산 기능은 준비중입니다.')">연간 결산</button>
-    </nav>
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-2">연간 지출 카테고리 TOP</h3>
+                <div id="annualPieChart" style="width: 100%; height: 300px;"></div>
+            </div>
+        </div>
+
+        <!-- 하단 GNB 네비게이션 -->
+        <div class="fixed bottom-0 w-full max-w-md bg-white border-t flex text-center text-sm shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+            <button id="navMonthly" class="flex-1 py-4 tab-active">월간 대시보드</button>
+            <button id="navAnnual" class="flex-1 py-4 tab-inactive">연간 결산</button>
+        </div>
+    </div>
 
     <script>
-        /** PWA 설정을 위한 인라인 처리 (단일 파일 구동용) **/
-        const manifest = {
-            name: "스마트 가계부", short_name: "가계부", start_url: ".", display: "standalone",
-            background_color: "#f4f7fb", theme_color: "#4a90e2"
-        };
-        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/manifest+json'});
-        const manifestUrl = URL.createObjectURL(manifestBlob);
-        const link = document.createElement('link');
-        link.rel = 'manifest'; link.href = manifestUrl;
-        document.head.appendChild(link);
+        let globalData = [];
+        let globalAssets = 0;
+        let currentDate = new Date(2026, 5, 1); // 기본 화면: 2026년 6월
 
-        const swCode = `self.addEventListener('install', e => self.skipWaiting()); self.addEventListener('fetch', e => {});`;
-        const swBlob = new Blob([swCode], {type: 'application/javascript'});
-        if ('serviceWorker' in navigator) navigator.serviceWorker.register(URL.createObjectURL(swBlob));
+        // 차트 객체 초기화
+        let sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
+        let annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
+        let annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
 
-        /** 전역 변수 및 DOM **/
-        let rawTx = [];
-        let rawAssets = 0;
-        let currentDate = new Date(); // 현재 날짜 기준
-        let echartInstance = null;
+        // 하단 탭 전환 로직
+        document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
+        document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
 
-        document.getElementById('excel-upload').addEventListener('change', handleUpload);
-        document.getElementById('prev-month').addEventListener('click', () => changeMonth(-1));
-        document.getElementById('next-month').addEventListener('click', () => changeMonth(1));
+        function switchTab(tab) {
+            document.getElementById('tab-monthly').classList.toggle('hide', tab !== 'monthly');
+            document.getElementById('tab-annual').classList.toggle('hide', tab !== 'annual');
+            document.getElementById('navMonthly').className = `flex-1 py-4 ${tab === 'monthly' ? 'tab-active' : 'tab-inactive'}`;
+            document.getElementById('navAnnual').className = `flex-1 py-4 ${tab === 'annual' ? 'tab-active' : 'tab-inactive'}`;
+            setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
+        }
 
-        /** 1. 엑셀 파싱 **/
-        function handleUpload(e) {
+        // 파일 업로드 및 파싱
+        document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            if (!file) return;
-            document.getElementById('upload-status').innerText = "분석 중...";
-            
             const reader = new FileReader();
-            reader.onload = (evt) => {
-                const data = new Uint8Array(evt.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+
+                // 1. 자산 파싱 (중복 방지 및 군인공제 적용)
+                parseAssets(workbook.Sheets['뱅샐현황']);
                 
-                // 가계부 내역 시트 파싱
-                const txSheet = workbook.SheetNames.find(n => n.includes('가계부'));
-                if (txSheet) rawTx = XLSX.utils.sheet_to_json(workbook.Sheets[txSheet]);
+                // 2. 가계부 내역 파싱
+                globalData = XLSX.utils.sheet_to_json(workbook.Sheets['가계부 내역']);
                 
-                // 뱅샐현황 시트 파싱 (잔액 추정 합산)
-                const assetSheet = workbook.SheetNames.find(n => n.includes('뱅샐'));
-                if (assetSheet) {
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[assetSheet], {header: 1});
-                    rawAssets = 0;
-                    rows.forEach(row => {
-                        // 가장 흔한 엑셀 서식 상, 특정 행에 문자열과 큰 숫자가 같이 있으면 잔액으로 간주
-                        const numbers = row.filter(cell => typeof cell === 'number' && cell > 1000);
-                        if(numbers.length > 0 && row.some(cell => typeof cell === 'string')) {
-                            rawAssets += Math.max(...numbers); // 해당 행의 가장 큰 숫자를 잔액으로 합산
-                        }
-                    });
-                }
-                document.getElementById('upload-status').innerText = "업로드 및 파싱 완료!";
-                updateUI();
+                updateDashboard();
             };
             reader.readAsArrayBuffer(file);
-        }
+        });
 
-        /** 2. 월 변경 및 날짜 계산 **/
-        function changeMonth(delta) {
-            currentDate.setMonth(currentDate.getMonth() + delta);
-            updateUI();
-        }
+        // 자산 파싱 핵심 로직 (6억 오류 해결)
+        function parseAssets(sheet) {
+            if (!sheet) return;
+            const data = XLSX.utils.sheet_to_json(sheet, {header: 1});
+            let total = 0;
+            let inFinanceSection = false;
 
-        function getCycleDates(dateObj) {
-            const y = dateObj.getFullYear(), m = dateObj.getMonth();
-            const start = new Date(y, m - 1, 10);
-            const end = new Date(y, m, 9, 23, 59, 59);
-            return { start, end, y, m };
-        }
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+                if (row[1] === '3.재무현황') { inFinanceSection = true; continue; }
+                if (row[1] === '4.보험현황' || row[1] === '5.투자현황') { inFinanceSection = false; break; } // 여기서 차단하여 중복 합산 방지
 
-        /** 3. 데이터 필터링 및 UI 갱신 **/
-        function updateUI() {
-            const { start, end, y, m } = getCycleDates(currentDate);
-            
-            document.getElementById('current-month').innerText = `${y}년 ${m + 1}월`;
-            document.getElementById('date-range-text').innerText = 
-                `(${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,'0')}-10 ~ ${end.getFullYear()}-${String(end.getMonth()+1).padStart(2,'0')}-09)`;
-
-            // 군인공제회 하드코딩 로직 (예: 24년 1월 기준 1,190만 원 + 매달 5.5만 원)
-            const baseDate = new Date(2024, 0, 1);
-            const diffMonths = (y - baseDate.getFullYear()) * 12 + (m - baseDate.getMonth());
-            const militaryAid = 11900000 + (Math.max(0, diffMonths) * 55000);
-            
-            document.getElementById('total-asset').innerText = Math.floor(rawAssets + militaryAid).toLocaleString() + " 원";
-
-            // 전월 10일 ~ 당월 9일, 이체 제외 필터링
-            const filteredTx = rawTx.filter(tx => {
-                if (tx['타입'] === '이체') return false;
-                const txDate = new Date(tx['날짜'] || tx['Date']);
-                return txDate >= start && txDate <= end;
-            });
-
-            updateBudget(filteredTx, y, m);
-            drawSankey(filteredTx);
-        }
-
-        /** 4. 예산 로직 **/
-        function saveBudget() {
-            const { y, m } = getCycleDates(currentDate);
-            const val = document.getElementById('budget-input').value;
-            localStorage.setItem(`budget_${y}_${m}`, val);
-            updateUI();
-        }
-
-        function updateBudget(txList, y, m) {
-            const budget = Number(localStorage.getItem(`budget_${y}_${m}`)) || 0;
-            document.getElementById('budget-input').value = budget > 0 ? budget : '';
-
-            let spent = 0;
-            txList.forEach(tx => {
-                if (tx['타입'] === '지출') spent += Math.abs(tx['금액']);
-            });
-
-            const bar = document.getElementById('budget-bar');
-            const txt = document.getElementById('budget-text');
-            
-            if (budget > 0) {
-                const ratio = (spent / budget) * 100;
-                bar.style.width = Math.min(ratio, 100) + '%';
-                bar.style.backgroundColor = ratio < 80 ? 'var(--safe)' : (ratio <= 100 ? 'var(--warn)' : 'var(--danger)');
-                txt.innerText = `사용: ${spent.toLocaleString()}원 / 잔여: ${(budget - spent).toLocaleString()}원`;
-            } else {
-                bar.style.width = '0%';
-                txt.innerText = "예산을 설정해주세요.";
+                // 금액은 E열(인덱스 4)에 존재
+                if (inFinanceSection && row[4] !== undefined && !isNaN(row[4])) {
+                    total += Number(row[4]);
+                }
             }
+
+            // 군인공제회 자산 추가 (기본 1190만원 + 매월 5.5만원)
+            // 기준을 편의상 오늘 날짜와 2026년 6월의 차이로 계산 (현재 데모는 1190만 고정)
+            const militaryMutualAid = 11900000; 
+            globalAssets = total + militaryMutualAid;
+            
+            document.getElementById('totalAsset').innerText = globalAssets.toLocaleString() + ' 원';
         }
 
-        /** 5. 시각화 (Sankey) **/
-        function drawSankey(txList) {
-            if (!echartInstance) echartInstance = echarts.init(document.getElementById('sankey-chart'));
+        // 월 네비게이션 제어
+        document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); updateDashboard(); });
+        document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); updateDashboard(); });
+
+        function updateDashboard() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth() + 1;
             
-            let totalSpent = 0;
-            const categories = {};
+            // UI 업데이트 (회계 기준일 표시)
+            document.getElementById('currentMonthLabel').innerText = `${year}년 ${month}월`;
             
-            txList.forEach(tx => {
-                if (tx['타입'] === '지출') {
-                    const cat = tx['대분류'] || '미분류';
-                    const amt = Math.abs(tx['금액']);
-                    categories[cat] = (categories[cat] || 0) + amt;
-                    totalSpent += amt;
+            let prevMonthStr = String(month).padStart(2, '0');
+            let nextMonthStr = String(month === 12 ? 1 : month + 1).padStart(2, '0');
+            document.getElementById('cycleLabel').innerText = `(${prevMonthStr}.10 ~ ${nextMonthStr}.09)`;
+
+            // 데이터 필터링 (매월 10일 ~ 익월 9일)
+            const startDate = new Date(year, month - 1, 10, 0, 0, 0);
+            const endDate = new Date(year, month, 9, 23, 59, 59);
+
+            let income = 0;
+            let expense = 0;
+            let categories = {};
+
+            globalData.forEach(row => {
+                // 엑셀 날짜 파싱 (일련번호 or 텍스트)
+                let dateObj = new Date(row['날짜']);
+                if (typeof row['날짜'] === 'number') dateObj = new Date(Math.round((row['날짜'] - 25569) * 86400 * 1000));
+                
+                if (dateObj >= startDate && dateObj <= endDate) {
+                    const type = row['타입'];
+                    let amount = Number(row['금액']);
+                    if (isNaN(amount)) return;
+
+                    if (type === '수입') {
+                        income += amount;
+                    } else if (type === '지출') {
+                        amount = Math.abs(amount); // 음수를 양수로
+                        expense += amount;
+                        const cat = row['대분류'] || '미분류';
+                        categories[cat] = (categories[cat] || 0) + amount;
+                    }
                 }
             });
 
-            const nodes = [{ name: '총 지출' }];
-            const links = [];
+            document.getElementById('totalIncome').innerText = income.toLocaleString() + ' 원';
+            document.getElementById('totalExpense').innerText = expense.toLocaleString() + ' 원';
 
-            Object.entries(categories).forEach(([cat, amt]) => {
-                nodes.push({ name: cat });
-                links.push({ source: '총 지출', target: cat, value: amt });
-            });
+            renderSankey(income, expense, categories);
+            updateBudgetUI(year, month, expense);
+        }
 
-            // 지출 내역이 없으면 차트 초기화
-            if (links.length === 0) {
-                echartInstance.clear();
+        // 예산 관리 로직
+        document.getElementById('setBudgetBtn').addEventListener('click', () => {
+            const input = document.getElementById('budgetInput').value;
+            if(input) {
+                const key = `budget_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}`;
+                localStorage.setItem(key, input);
+                updateDashboard();
+            }
+        });
+
+        document.getElementById('loadPrevBudget').addEventListener('click', () => {
+            let prevDate = new Date(currentDate);
+            prevDate.setMonth(prevDate.getMonth() - 1);
+            const prevKey = `budget_${prevDate.getFullYear()}_${prevDate.getMonth() + 1}`;
+            const prevBudget = localStorage.getItem(prevKey);
+            if(prevBudget) {
+                document.getElementById('budgetInput').value = prevBudget;
+                localStorage.setItem(`budget_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}`, prevBudget);
+                updateDashboard();
+            } else {
+                alert("저번 달 예산 데이터가 없습니다.");
+            }
+        });
+
+        function updateBudgetUI(year, month, expense) {
+            const key = `budget_${year}_${month}`;
+            const budget = localStorage.getItem(key);
+            const bar = document.getElementById('budgetBar');
+            const status = document.getElementById('budgetStatus');
+
+            if (!budget) {
+                document.getElementById('budgetInput').value = '';
+                bar.style.width = '0%';
+                status.innerText = '예산을 설정해주세요.';
                 return;
             }
 
-            echartInstance.setOption({
-                tooltip: { trigger: 'item' },
-                series: {
-                    type: 'sankey', layout: 'none',
-                    data: nodes, links: links,
-                    lineStyle: { color: 'gradient', curveness: 0.5 },
-                    nodeAlign: 'left'
-                }
-            }, true);
+            document.getElementById('budgetInput').value = budget;
+            const percentage = (expense / Number(budget)) * 100;
+            const cappedPercent = Math.min(percentage, 100);
+            
+            bar.style.width = `${cappedPercent}%`;
+            
+            if (percentage < 80) {
+                bar.className = 'h-4 transition-all duration-500 bg-green-500';
+            } else if (percentage <= 100) {
+                bar.className = 'h-4 transition-all duration-500 bg-yellow-400';
+            } else {
+                bar.className = 'h-4 transition-all duration-500 bg-red-500';
+            }
+
+            status.innerHTML = `예산 <b>${Number(budget).toLocaleString()}원</b> 중 <b>${percentage.toFixed(1)}%</b> 사용`;
         }
 
-        // 초기화
-        updateUI();
+        // 생키 다이어그램 렌더링
+        function renderSankey(income, expense, categories) {
+            if (income === 0 && expense === 0) {
+                sankeyInstance.clear();
+                return;
+            }
+
+            let nodes = [{name: '수입'}, {name: '지출'}];
+            let links = [];
+
+            let remaining = income - expense;
+
+            if (remaining >= 0) {
+                if(remaining > 0) {
+                    nodes.push({name: '잔여/저축'});
+                    links.push({source: '수입', target: '잔여/저축', value: remaining});
+                }
+                if(expense > 0) links.push({source: '수입', target: '지출', value: expense});
+            } else {
+                nodes.push({name: '초과지출'});
+                if(income > 0) links.push({source: '수입', target: '지출', value: income});
+                links.push({source: '초과지출', target: '지출', value: Math.abs(remaining)});
+            }
+
+            // 노드 이름 중복 방지를 위해 카테고리명 앞에 마커 추가
+            for (const [cat, val] of Object.entries(categories)) {
+                let catName = `[카테고리] ${cat}`;
+                nodes.push({name: catName});
+                links.push({source: '지출', target: catName, value: val});
+            }
+
+            const option = {
+                tooltip: { trigger: 'item', triggerOn: 'mousemove' },
+                series: {
+                    type: 'sankey',
+                    layout: 'none',
+                    emphasis: { focus: 'adjacency' },
+                    data: nodes,
+                    links: links,
+                    lineStyle: { color: 'gradient', curveness: 0.5 },
+                    label: { fontSize: 11 }
+                }
+            };
+            sankeyInstance.setOption(option, true);
+        }
+
+        // 연간 결산 로직
+        function renderAnnual() {
+            if(globalData.length === 0) return;
+
+            let monthlyStats = {};
+            let totalCats = {};
+
+            globalData.forEach(row => {
+                let dateObj = new Date(row['날짜']);
+                if (typeof row['날짜'] === 'number') dateObj = new Date(Math.round((row['날짜'] - 25569) * 86400 * 1000));
+                
+                // 10일 기준 회계월 계산
+                let y = dateObj.getFullYear();
+                let m = dateObj.getMonth() + 1; // 1~12
+                let d = dateObj.getDate();
+
+                // 1~9일은 전월로 편입
+                if (d < 10) {
+                    m -= 1;
+                    if (m === 0) { m = 12; y -= 1; }
+                }
+
+                let cycleKey = `${y}-${String(m).padStart(2, '0')}`;
+                if (!monthlyStats[cycleKey]) monthlyStats[cycleKey] = { income: 0, expense: 0 };
+
+                const type = row['타입'];
+                let amount = Number(row['금액']);
+                if (isNaN(amount)) return;
+
+                if (type === '수입') {
+                    monthlyStats[cycleKey].income += amount;
+                } else if (type === '지출') {
+                    amount = Math.abs(amount);
+                    monthlyStats[cycleKey].expense += amount;
+                    
+                    const cat = row['대분류'] || '미분류';
+                    totalCats[cat] = (totalCats[cat] || 0) + amount;
+                }
+            });
+
+            // 1. 연간 바 차트
+            const sortedKeys = Object.keys(monthlyStats).sort().slice(-12); // 최근 12개월
+            const barOption = {
+                tooltip: { trigger: 'axis' },
+                legend: { data: ['수입', '지출'] },
+                xAxis: { type: 'category', data: sortedKeys.map(k => k.substring(2)) },
+                yAxis: { type: 'value', show: false },
+                series: [
+                    { name: '수입', type: 'bar', data: sortedKeys.map(k => monthlyStats[k].income), itemStyle: {color: '#34d399'} },
+                    { name: '지출', type: 'bar', data: sortedKeys.map(k => monthlyStats[k].expense), itemStyle: {color: '#f87171'} }
+                ]
+            };
+            annualBarInstance.setOption(barOption);
+
+            // 2. 파이 차트
+            let pieData = Object.keys(totalCats).map(key => ({ name: key, value: totalCats[key] }));
+            pieData.sort((a, b) => b.value - a.value); // 내림차순 정렬
+            
+            const pieOption = {
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+                    data: pieData.slice(0, 7) // 상위 7개만 표시
+                }]
+            };
+            annualPieInstance.setOption(pieOption);
+        }
     </script>
 </body>
-</html>
 </html>
