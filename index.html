@@ -22,7 +22,10 @@
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
         
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
-            <h1 class="text-xl font-bold text-center">우리 부부 가계부</h1>
+            <div class="flex justify-between items-center mb-2">
+                <h1 class="text-xl font-bold">우리 부부 가계부</h1>
+                <button id="clearDataBtn" class="text-xs bg-white text-blue-600 px-2 py-1 rounded shadow hover:bg-gray-100">데이터 초기화</button>
+            </div>
             
             <label class="flex flex-col items-center justify-center w-full p-2 border-2 border-white border-dashed rounded-xl cursor-pointer hover:bg-blue-700 transition">
                 <span class="font-semibold text-sm">1. 뱅샐 엑셀 업로드 (.xlsx)</span>
@@ -151,6 +154,31 @@
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
         const annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
 
+        // 초기 구동 시 저장된 데이터 불러오기 (새로고침 방어)
+        window.onload = () => {
+            const savedData = localStorage.getItem('mySavedLedgerData');
+            const savedAssets = localStorage.getItem('mySavedAssets');
+            const savedCoupang = localStorage.getItem('mySavedCoupang');
+            
+            if(savedData && savedAssets) {
+                globalData = JSON.parse(savedData);
+                globalAssets = Number(savedAssets);
+                if(savedCoupang) coupangMatches = JSON.parse(savedCoupang);
+                updateDashboard();
+            }
+        };
+
+        // 데이터 초기화 버튼
+        document.getElementById('clearDataBtn').addEventListener('click', () => {
+            if(confirm("저장된 엑셀 데이터를 모두 지우시겠습니까?")) {
+                localStorage.removeItem('mySavedLedgerData');
+                localStorage.removeItem('mySavedAssets');
+                localStorage.removeItem('mySavedCoupang');
+                location.reload();
+            }
+        });
+
+        // 탭 전환
         document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
         document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
 
@@ -162,6 +190,7 @@
             setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
         }
 
+        // 파일 업로드 및 자동 저장
         document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -170,15 +199,18 @@
                 const workbook = XLSX.read(data, {type: 'array'});
                 parseExactAssets(workbook.Sheets['뱅샐현황']);
                 globalData = XLSX.utils.sheet_to_json(workbook.Sheets['가계부 내역']);
+                
+                // 브라우저 저장소에 데이터 저장 (새로고침 시 유지)
+                localStorage.setItem('mySavedLedgerData', JSON.stringify(globalData));
+                localStorage.setItem('mySavedAssets', globalAssets);
+                
                 updateDashboard();
             };
             reader.readAsArrayBuffer(file);
         });
 
-        // ⭐ 완전무결한 절대좌표 자산 스캔 로직 (엑셀 빈칸으로 인한 밀림 완벽 차단)
         function parseExactAssets(sheet) {
             if (!sheet) return;
-            // {header: "A"} 속성을 주면 엑셀 칸이 아무리 비어있어도 무조건 A, B, C, D, E 고정 좌표로 강제 할당합니다.
             const data = XLSX.utils.sheet_to_json(sheet, {header: "A", defval: ""});
             let total = 0;
             let inFinance = false;
@@ -191,7 +223,6 @@
                 if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) { break; }
 
                 if (inFinance) {
-                    // 자산 금액은 무조건 'E열'에 고정되어 있습니다. (이중합산, 0원 처리 원천 차단)
                     let valRaw = row["E"];
                     if (valRaw !== undefined && valRaw !== "") {
                         let val = Number(String(valRaw).replace(/,/g, ''));
@@ -223,6 +254,8 @@
                     }
                 }
             });
+            // 쿠팡 매칭 데이터도 로컬 스토리지에 저장
+            localStorage.setItem('mySavedCoupang', JSON.stringify(coupangMatches));
             alert(`${coupangMatches.length}건의 쿠팡 내역이 매칭되었습니다.`);
             updateDashboard();
         });
@@ -241,7 +274,9 @@
             let nextM = String(m === 12 ? 1 : m + 1).padStart(2, '0');
             document.getElementById('cycleLabel').innerText = `(${prevM}.10 ~ ${nextM}.09)`;
 
-            document.getElementById('totalAsset').innerText = (globalAssets + getMilitaryAidAsset(y, m)).toLocaleString() + ' 원';
+            // ⭐ 자산 표기 시 Math.round()를 적용하여 소수점 완벽 절사
+            const finalAsset = Math.round(globalAssets + getMilitaryAidAsset(y, m));
+            document.getElementById('totalAsset').innerText = finalAsset.toLocaleString() + ' 원';
 
             const startDate = new Date(y, m - 1, 10, 0, 0, 0);
             const endDate = new Date(y, m, 9, 23, 59, 59);
@@ -283,21 +318,22 @@
                             if(match) desc = `<span class="text-blue-600 font-bold">[${match.item}]</span> ` + desc;
                         }
 
-                        currentFilteredData.push({ date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, cat: cat, desc: desc, amount: amount });
+                        currentFilteredData.push({ date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, cat: cat, desc: desc, amount: Math.round(amount) });
                     }
                 }
             });
 
-            document.getElementById('totalIncome').innerText = income.toLocaleString() + ' 원';
-            document.getElementById('fixedExpense').innerText = fixedExp.toLocaleString() + ' 원';
-            document.getElementById('varExpense').innerText = varExp.toLocaleString() + ' 원';
+            // 수입 및 지출 소수점 제거 적용
+            document.getElementById('totalIncome').innerText = Math.round(income).toLocaleString() + ' 원';
+            document.getElementById('fixedExpense').innerText = Math.round(fixedExp).toLocaleString() + ' 원';
+            document.getElementById('varExpense').innerText = Math.round(varExp).toLocaleString() + ' 원';
 
             const filterEl = document.getElementById('tableFilter');
             filterEl.innerHTML = '';
             catSet.forEach(c => filterEl.innerHTML += `<option value="${c}">${c}</option>`);
 
             renderBudgetUI(y, m);
-            renderSankey(income, fixedExp + varExp, currentMonthExpenses);
+            renderSankey(Math.round(income), Math.round(fixedExp + varExp), currentMonthExpenses);
             renderTable('전체');
         }
 
@@ -392,7 +428,7 @@
                     <div class="clickable-cat" onclick="filterByCategory('${cat}')">
                         <div class="flex justify-between text-xs mb-1">
                             <span class="text-gray-700 font-bold">${cat} <span class="font-normal text-gray-400">(${budget.toLocaleString()})</span></span>
-                            <span>${spent.toLocaleString()} / ${Math.floor(percent)}%</span>
+                            <span>${Math.round(spent).toLocaleString()} / ${Math.floor(percent)}%</span>
                         </div>
                         <div class="w-full bg-gray-100 rounded-full h-2">
                             <div class="${color} h-2 rounded-full" style="width: ${percent}%"></div>
@@ -403,7 +439,6 @@
             if(!hasBudget) container.innerHTML = `<p class="text-xs text-center text-gray-400">예산을 설정해주세요.</p>`;
         }
 
-        // ⭐ 흐름도 터치 연동 (카테고리 누르면 해당 표 출력, '지출' 기둥 누르면 전체보기 초기화)
         function renderSankey(income, expense, categories) {
             if (income === 0 && expense === 0) { sankeyInstance.clear(); return; }
 
@@ -417,7 +452,7 @@
             for (const [cat, val] of Object.entries(categories)) {
                 let nodeName = cat + '\u200B'; 
                 nodes.push({name: nodeName});
-                links.push({source: '지출', target: nodeName, value: val});
+                links.push({source: '지출', target: nodeName, value: Math.round(val)});
             }
 
             sankeyInstance.setOption({
@@ -429,8 +464,6 @@
             sankeyInstance.on('click', function (params) {
                 if (params.dataType === 'node') {
                     let name = params.name.replace('\u200B', ''); 
-                    
-                    // 지출 막대 누르면 리셋, 특정 카테고리 누르면 해당 항목 필터링
                     if (name === '지출' || name === '수입' || name === '잔여/저축' || name === '초과지출') {
                         filterByCategory('전체');
                     } else {
@@ -463,11 +496,11 @@
                 tooltip: { trigger: 'axis' }, legend: { data: ['수입', '지출'] },
                 xAxis: { type: 'category', data: keys.map(k=>k.substring(2)) }, yAxis: { show: false },
                 series: [
-                    { name: '수입', type: 'bar', data: keys.map(k=>monthlyStats[k].inc), itemStyle: {color: '#34d399'} },
-                    { name: '지출', type: 'bar', data: keys.map(k=>monthlyStats[k].exp), itemStyle: {color: '#f87171'} }
+                    { name: '수입', type: 'bar', data: keys.map(k=>Math.round(monthlyStats[k].inc)), itemStyle: {color: '#34d399'} },
+                    { name: '지출', type: 'bar', data: keys.map(k=>Math.round(monthlyStats[k].exp)), itemStyle: {color: '#f87171'} }
                 ]
             });
-            let pieData = Object.keys(totalCats).map(k=>({name:k, value:totalCats[k]})).sort((a,b)=>b.value-a.value).slice(0,7);
+            let pieData = Object.keys(totalCats).map(k=>({name:k, value:Math.round(totalCats[k])})).sort((a,b)=>b.value-a.value).slice(0,7);
             annualPieInstance.setOption({ tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pieData }] });
         }
     </script>
