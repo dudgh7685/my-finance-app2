@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>스마트 가계부 PWA</title>
+    <title>스마트 가계부 & 투자 PWA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js"></script>
@@ -27,9 +27,9 @@
         
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
             <div class="flex justify-between items-center mb-2">
-                <h1 class="text-xl font-bold">우리 부부 가계부</h1>
+                <h1 class="text-xl font-bold">우리 부부 자산관리</h1>
                 <div class="space-x-1">
-                    <button id="exportExcelBtn" class="text-xs bg-blue-800 text-white px-2 py-1 rounded shadow hover:bg-blue-900">엑셀 다운로드</button>
+                    <button id="exportExcelBtn" class="text-xs bg-blue-800 text-white px-2 py-1 rounded shadow hover:bg-blue-900">엑셀 다운</button>
                     <button id="clearDataBtn" class="text-xs bg-white text-red-500 px-2 py-1 rounded shadow hover:bg-gray-100">초기화</button>
                 </div>
             </div>
@@ -73,11 +73,11 @@
                     <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
                     <p id="totalIncome" class="text-xl font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <div id="varExpenseCard" class="bg-red-50 rounded-xl p-4 border border-red-100 clickable-card" onclick="filterByCategory('변동지출')">
+                <div class="bg-red-50 rounded-xl p-4 border border-red-100 clickable-card" onclick="filterByCategory('변동지출')">
                     <p class="text-red-600 text-xs font-bold">변동 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="varExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <div id="fixedExpenseCard" class="bg-orange-50 rounded-xl p-4 border border-orange-100 clickable-card" onclick="filterByCategory('고정지출')">
+                <div class="bg-orange-50 rounded-xl p-4 border border-orange-100 clickable-card" onclick="filterByCategory('고정지출')">
                     <p class="text-orange-600 text-xs font-bold">고정 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="fixedExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
@@ -112,7 +112,7 @@
                         <option disabled>──────────</option>
                     </select>
                 </div>
-                <p class="text-[10px] text-gray-400 mb-2">* 앞의 [변동/고정] 버튼을 눌러 영구 키워드 설정, 텍스트를 눌러 직접 수정</p>
+                <p class="text-[10px] text-gray-400 mb-2">* 앞의 배지를 눌러 영구 키워드 설정, 텍스트를 눌러 직접 수정</p>
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-full text-left text-xs whitespace-nowrap">
                         <thead class="bg-gray-100 text-gray-600">
@@ -165,29 +165,52 @@
 
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-700 mb-3">최다 지출 가맹점 TOP 5</h3>
-                <div id="topMerchantsList" class="space-y-2">
-                    <p class="text-xs text-gray-400">데이터가 없습니다.</p>
-                </div>
+                <div id="topMerchantsList" class="space-y-2"></div>
             </div>
-
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-700 mb-2">주말 vs 평일 지출 패턴</h3>
                 <div id="annualPieChart" style="width: 100%; height: 250px;"></div>
             </div>
-
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <h3 class="font-bold text-gray-700 mb-2">분기별 지출 트렌드</h3>
                 <div id="annualBarChart" style="width: 100%; height: 250px;"></div>
             </div>
         </div>
 
-        <div class="fixed bottom-0 w-full max-w-md bg-white border-t flex text-center text-sm shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
+        <div id="tab-invest" class="p-5 space-y-6 hide">
+            <div class="flex justify-between items-end mb-2">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">투자 포트폴리오</h2>
+                    <p class="text-sm text-gray-500">계좌별 별명 및 실시간 수익률 관리</p>
+                </div>
+                <button id="refreshPricesBtn" class="text-xs bg-blue-100 text-blue-700 font-bold px-3 py-2 rounded-lg hover:bg-blue-200 transition shadow-sm">🔄 실시간 주가 갱신</button>
+            </div>
+
+            <div class="bg-blue-600 p-5 rounded-2xl shadow-md text-white">
+                <p class="text-blue-200 text-xs font-bold mb-1">총 투자 평가금액</p>
+                <h3 id="totalInvestVal" class="text-3xl font-bold">0 원</h3>
+                <div class="mt-3 flex justify-between text-sm border-t border-blue-500 pt-2">
+                    <span>총 매수금액: <span id="totalInvestCost" class="font-bold">0 원</span></span>
+                    <span id="totalInvestReturn" class="font-bold">+0%</span>
+                </div>
+            </div>
+
+            <button id="addAccountBtn" class="w-full bg-gray-100 text-gray-600 font-bold py-3 rounded-xl border border-dashed border-gray-300 hover:bg-gray-200 transition">
+                + 새 목적 계좌(별명) 만들기
+            </button>
+
+            <div id="portfolioList" class="space-y-4"></div>
+        </div>
+
+        <div class="fixed bottom-0 w-full max-w-md bg-white border-t flex text-center text-xs sm:text-sm shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50">
             <button id="navMonthly" class="flex-1 py-4 tab-active">월간 대시보드</button>
             <button id="navAnnual" class="flex-1 py-4 tab-inactive">연간 결산</button>
+            <button id="navInvest" class="flex-1 py-4 tab-inactive">투자 관리</button>
         </div>
     </div>
 
     <script>
+        // 전역 상태
         let globalData = [];
         let globalAssetsRaw = []; 
         let globalAssets = 0;
@@ -195,9 +218,13 @@
         let currentMonthExpenses = {}; 
         let currentFilteredData = [];
         let coupangMatches = [];
-
         let userFixedKeywords = JSON.parse(localStorage.getItem('userFixedKeywords')) || ['주거/통신', '금융/보험', '교육', '대출/이자'];
+        
+        // 투자 관리 상태
+        let portfolios = JSON.parse(localStorage.getItem('myPortfolios')) || [];
+        const환율 = 1350; // 달러 환율 임시 고정값
 
+        // 차트 초기화
         const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
         const annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
@@ -215,15 +242,18 @@
                 if(savedCoupang) coupangMatches = JSON.parse(savedCoupang);
                 updateDashboard();
             }
+            renderPortfolios(); // 투자 탭 렌더링
         };
 
+        // 데이터 초기화
         document.getElementById('clearDataBtn').addEventListener('click', () => {
-            if(confirm("모든 데이터를 초기화하시겠습니까?")) {
+            if(confirm("저장된 엑셀, 키워드, 투자 계좌를 모두 초기화하시겠습니까?")) {
                 localStorage.clear();
                 location.reload();
             }
         });
 
+        // 엑셀 저장
         document.getElementById('exportExcelBtn').addEventListener('click', () => {
             if(globalData.length === 0) return alert('내보낼 데이터가 없습니다.');
             const wb = XLSX.utils.book_new();
@@ -234,17 +264,24 @@
             XLSX.writeFile(wb, "수정된_우리부부_가계부.xlsx");
         });
 
+        // 탭 전환 로직
         document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
         document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
+        document.getElementById('navInvest').addEventListener('click', () => { switchTab('invest'); renderPortfolios(); });
 
         function switchTab(tab) {
             document.getElementById('tab-monthly').classList.toggle('hide', tab !== 'monthly');
             document.getElementById('tab-annual').classList.toggle('hide', tab !== 'annual');
+            document.getElementById('tab-invest').classList.toggle('hide', tab !== 'invest');
+            
             document.getElementById('navMonthly').className = `flex-1 py-4 ${tab === 'monthly' ? 'tab-active' : 'tab-inactive'}`;
             document.getElementById('navAnnual').className = `flex-1 py-4 ${tab === 'annual' ? 'tab-active' : 'tab-inactive'}`;
+            document.getElementById('navInvest').className = `flex-1 py-4 ${tab === 'invest' ? 'tab-active' : 'tab-inactive'}`;
+            
             setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
         }
 
+        // 파일 업로드
         document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
@@ -263,7 +300,7 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // ⭐ 오만함은 버리고 무식하고 가장 확실하게 짠 자산 파싱 로직
+        // ⭐ 절대 고장나지 않는 자산 파싱 (무조건 E열 스캔)
         function parseExactAssets(aoaData) {
             let total = 0; 
             let inFinance = false;
@@ -271,18 +308,15 @@
             for (let i = 0; i < aoaData.length; i++) {
                 let row = aoaData[i];
                 if (!row) continue;
-                
                 let rowStr = String(row.join('')).replace(/\s+/g, '');
                 
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
-                // 4.보험현황이나 5.투자현황이 나오면 자산 긁어오기 종료
                 if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) break;
 
                 if (inFinance) {
-                    // 요약행 스킵
                     if (rowStr.includes('총자산') || rowStr.includes('순자산') || rowStr.includes('총계') || rowStr.includes('항목')) continue;
-
-                    // 뱅크샐러드 엑셀의 자산 금액은 무조건 E열(index 4)에 적힘. 절대 안 밀림.
+                    
+                    // 무조건 4번째 인덱스(E열)만 추출
                     let valRaw = row[4];
                     if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
                         let val = Number(String(valRaw).replace(/,/g, '').trim());
@@ -300,6 +334,7 @@
             return 11900000 + (diff * 55000);
         }
 
+        // 쿠팡 매칭
         document.getElementById('applyCoupangBtn').addEventListener('click', () => {
             const text = document.getElementById('coupangText').value;
             if(!text) return;
@@ -313,22 +348,20 @@
                 }
             });
             localStorage.setItem('mySavedCoupang', JSON.stringify(coupangMatches));
-            alert(`${coupangMatches.length}건의 매칭 완료`);
+            alert(`${coupangMatches.length}건 매칭 완료`);
             updateDashboard();
         });
 
         document.getElementById('prevMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); updateDashboard(); });
         document.getElementById('nextMonth').addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); updateDashboard(); });
 
+        // 월간 대시보드 로직
         function updateDashboard() {
             if(globalData.length === 0) return;
-
-            const y = currentDate.getFullYear();
-            const m = currentDate.getMonth() + 1;
+            const y = currentDate.getFullYear(); const m = currentDate.getMonth() + 1;
             
             document.getElementById('currentMonthLabel').innerText = `${y}년 ${m}월`;
-            let prevM = String(m).padStart(2, '0');
-            let nextM = String(m === 12 ? 1 : m + 1).padStart(2, '0');
+            let prevM = String(m).padStart(2, '0'); let nextM = String(m === 12 ? 1 : m + 1).padStart(2, '0');
             document.getElementById('cycleLabel').innerText = `(${prevM}.10 ~ ${nextM}.09)`;
 
             const finalAsset = Math.round(globalAssets + getMilitaryAidAsset(y, m));
@@ -338,8 +371,7 @@
             const endDate = new Date(y, m, 9, 23, 59, 59);
 
             let income = 0; let fixedExp = 0; let varExp = 0;
-            currentMonthExpenses = {}; 
-            currentFilteredData = [];
+            currentMonthExpenses = {}; currentFilteredData = [];
             let catSet = new Set(['전체', '고정지출', '변동지출']);
 
             globalData.forEach((row, index) => {
@@ -347,9 +379,7 @@
                 let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
                 
                 if (dateObj >= startDate && dateObj <= endDate) {
-                    let type = row['타입'];
-                    let cat = row['대분류'] || '미분류';
-                    let amount = Number(row['금액']);
+                    let type = row['타입']; let cat = row['대분류'] || '미분류'; let amount = Number(row['금액']);
                     if (isNaN(amount) || type === '이체') return;
 
                     if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) {
@@ -360,17 +390,14 @@
                         income += amount;
                     } else if (type === '지출') {
                         amount = Math.abs(amount);
-                        
                         let rawDesc = String(row['내용']);
+                        
                         let isFixed = false;
                         for (let kw of userFixedKeywords) {
-                            if (rawDesc.includes(kw) || cat.includes(kw)) {
-                                isFixed = true; break;
-                            }
+                            if (rawDesc.includes(kw) || cat.includes(kw)) { isFixed = true; break; }
                         }
 
-                        if (isFixed) fixedExp += amount;
-                        else varExp += amount;
+                        if (isFixed) fixedExp += amount; else varExp += amount;
 
                         currentMonthExpenses[cat] = (currentMonthExpenses[cat] || 0) + amount;
                         catSet.add(cat);
@@ -381,15 +408,7 @@
                             if(match) displayDesc = `[${match.item}] ` + rawDesc;
                         }
 
-                        currentFilteredData.push({ 
-                            globalIndex: index, 
-                            date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, 
-                            cat: cat, 
-                            rawDesc: rawDesc,
-                            desc: displayDesc, 
-                            amount: Math.round(amount),
-                            isFixed: isFixed
-                        });
+                        currentFilteredData.push({ globalIndex: index, date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, cat: cat, rawDesc: rawDesc, desc: displayDesc, amount: Math.round(amount), isFixed: isFixed });
                     }
                 }
             });
@@ -401,9 +420,7 @@
             const filterEl = document.getElementById('tableFilter');
             let currentFilter = filterEl.value; 
             filterEl.innerHTML = `<option value="전체">전체 보기</option><option value="고정지출">📌 고정지출만</option><option value="변동지출">📊 변동지출만</option><option disabled>──────────</option>`;
-            catSet.forEach(c => {
-                if(!['전체','고정지출','변동지출'].includes(c)) filterEl.innerHTML += `<option value="${c}">${c}</option>`;
-            });
+            catSet.forEach(c => { if(!['전체','고정지출','변동지출'].includes(c)) filterEl.innerHTML += `<option value="${c}">${c}</option>`; });
             if(Array.from(filterEl.options).some(o => o.value === currentFilter)) filterEl.value = currentFilter;
 
             renderBudgetUI(y, m);
@@ -413,9 +430,7 @@
 
         window.toggleTransactionFixed = function(globalIndex) {
             let row = globalData[globalIndex];
-            let rawDesc = String(row['내용']);
-            let cat = String(row['대분류']);
-            
+            let rawDesc = String(row['내용']); let cat = String(row['대분류']);
             let matchedKw = null;
             for(let kw of userFixedKeywords) {
                 if(rawDesc.includes(kw) || cat.includes(kw)) { matchedKw = kw; break; }
@@ -441,7 +456,6 @@
             let row = globalData[idx];
             let oldVal = isAmount ? Math.abs(row[fieldName]) : row[fieldName];
             let newVal = prompt(`새로운 값을 입력하세요 (${fieldName}):`, oldVal);
-            
             if(newVal !== null && newVal.trim() !== '') {
                 if(isAmount) {
                     newVal = Number(newVal);
@@ -465,15 +479,9 @@
             else if(filterCat === '변동지출') filtered = currentFilteredData.filter(d => !d.isFixed);
             else filtered = currentFilteredData.filter(d => d.cat === filterCat);
             
-            if(filtered.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">내역이 없습니다.</td></tr>`;
-                return;
-            }
+            if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">내역이 없습니다.</td></tr>`; return; }
 
-            filtered.sort((a,b) => {
-                let ad = a.date.split('/'); let bd = b.date.split('/');
-                return (bd[0]-ad[0]) || (bd[1]-ad[1]);
-            });
+            filtered.sort((a,b) => { let ad = a.date.split('/'); let bd = b.date.split('/'); return (bd[0]-ad[0]) || (bd[1]-ad[1]); });
 
             filtered.forEach(row => {
                 let badgeClass = row.isFixed ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-gray-100 text-gray-500 border border-gray-200";
@@ -482,9 +490,7 @@
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0">
                         <td class="p-2 text-gray-500 text-[11px] align-middle">${row.date}</td>
-                        <td class="p-2 align-middle">
-                            <span class="text-[10px] text-gray-400 block mb-0.5">${row.cat}</span>
-                        </td>
+                        <td class="p-2 align-middle"><span class="text-[10px] text-gray-400 block mb-0.5">${row.cat}</span></td>
                         <td class="p-2 text-gray-800 text-[13px] align-middle">
                             <div class="flex items-center gap-1.5">
                                 <span onclick="toggleTransactionFixed(${row.globalIndex})" class="toggle-btn px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass}" title="눌러서 고정/변동 전환">${badgeText}</span>
@@ -501,11 +507,8 @@
 
         window.filterByCategory = function(cat) {
             const filterEl = document.getElementById('tableFilter');
-            if (['전체', '고정지출', '변동지출'].includes(cat) || Array.from(filterEl.options).some(opt => opt.value === cat)) {
-                renderTable(cat);
-            } else {
-                renderTable('전체');
-            }
+            if (['전체', '고정지출', '변동지출'].includes(cat) || Array.from(filterEl.options).some(opt => opt.value === cat)) renderTable(cat);
+            else renderTable('전체');
             document.getElementById('transactionTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
@@ -516,12 +519,10 @@
         });
 
         function buildBudgetForm(y, m) {
-            const key = `budget_${y}_${m}`;
-            const saved = JSON.parse(localStorage.getItem(key)) || {};
+            const saved = JSON.parse(localStorage.getItem(`budget_${y}_${m}`)) || {};
             const allCats = Array.from(new Set([...Object.keys(currentMonthExpenses), ...Object.keys(saved)]));
             const container = document.getElementById('budgetInputs');
             container.innerHTML = '';
-            
             allCats.forEach(cat => {
                 container.innerHTML += `
                     <div class="flex items-center gap-2 mb-2">
@@ -534,9 +535,7 @@
 
         document.getElementById('saveBudgetBtn').addEventListener('click', () => {
             let data = {};
-            document.querySelectorAll('.budget-input').forEach(input => {
-                if(Number(input.value) > 0) data[input.getAttribute('data-cat')] = Number(input.value);
-            });
+            document.querySelectorAll('.budget-input').forEach(input => { if(Number(input.value) > 0) data[input.getAttribute('data-cat')] = Number(input.value); });
             localStorage.setItem(`budget_${currentDate.getFullYear()}_${currentDate.getMonth() + 1}`, JSON.stringify(data));
             document.getElementById('budgetSetupArea').classList.add('hide');
             updateDashboard();
@@ -597,39 +596,24 @@
             });
         }
 
-        // ⭐ 연간 결산 로직 완벽 업데이트
+        // 연간결산 (유지)
         function renderAnnual() {
             if(globalData.length === 0) return;
-            
-            let totalInc = 0; let totalExp = 0; let totalFixed = 0; 
-            let totalBaby = 0; let totalCar = 0;
-            let dining = 0; let grocery = 0;
-            let weekendExp = 0; let weekdayExp = 0;
-            let merchants = {};
-            let quarterlyExp = { '1분기': 0, '2분기': 0, '3분기': 0, '4분기': 0 };
+            let totalInc = 0; let totalExp = 0; let totalFixed = 0; let totalBaby = 0; let totalCar = 0; let dining = 0; let grocery = 0; let weekendExp = 0; let weekdayExp = 0; let merchants = {}; let quarterlyExp = { '1분기': 0, '2분기': 0, '3분기': 0, '4분기': 0 };
 
             globalData.forEach(row => {
-                let dStr = row['날짜'];
-                let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
-                let type = row['타입']; let cat = String(row['대분류'] || '미분류'); 
-                let subCat = String(row['소분류'] || ''); let desc = String(row['내용']);
-                let amount = Number(row['금액']);
-                
+                let dStr = row['날짜']; let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
+                let type = row['타입']; let cat = String(row['대분류'] || '미분류'); let subCat = String(row['소분류'] || ''); let desc = String(row['내용']); let amount = Number(row['금액']);
                 if(isNaN(amount) || type === '이체') return;
                 if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) { type = '지출'; amount = -amount; }
 
-                if (type === '수입') {
-                    totalInc += amount;
-                } else if (type === '지출') {
-                    amount = Math.abs(amount);
-                    totalExp += amount;
-
+                if (type === '수입') { totalInc += amount; } 
+                else if (type === '지출') {
+                    amount = Math.abs(amount); totalExp += amount;
                     let isFixed = userFixedKeywords.some(kw => desc.includes(kw) || cat.includes(kw));
                     if(isFixed) totalFixed += amount;
-
                     if(cat === '자녀/육아') totalBaby += amount;
                     if(cat === '자동차' || cat === '교통/차량') totalCar += amount;
-
                     if(subCat.includes('배달') || subCat.includes('외식')) dining += amount;
                     else if(subCat.includes('마트') || subCat.includes('부식') || subCat.includes('식재료')) grocery += amount;
                     else if(cat === '식비') dining += amount;
@@ -638,8 +622,7 @@
                     if(cleanDesc) merchants[cleanDesc] = (merchants[cleanDesc] || 0) + amount;
 
                     let day = dateObj.getDay();
-                    if(day === 0 || day === 6) weekendExp += amount;
-                    else weekdayExp += amount;
+                    if(day === 0 || day === 6) weekendExp += amount; else weekdayExp += amount;
 
                     let month = dateObj.getMonth() + 1;
                     if(month <= 3) quarterlyExp['1분기'] += amount;
@@ -665,34 +648,165 @@
 
             let sortedMerchants = Object.keys(merchants).map(k => ({name: k, val: merchants[k]})).sort((a,b)=>b.val-a.val).slice(0,5);
             let merchantHTML = '';
-            sortedMerchants.forEach((m, idx) => {
-                merchantHTML += `<div class="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"><span class="truncate w-2/3 text-gray-600">${idx+1}. ${m.name}</span><span class="font-bold text-gray-800">${Math.round(m.val).toLocaleString()}원</span></div>`;
-            });
+            sortedMerchants.forEach((m, idx) => { merchantHTML += `<div class="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"><span class="truncate w-2/3 text-gray-600">${idx+1}. ${m.name}</span><span class="font-bold text-gray-800">${Math.round(m.val).toLocaleString()}원</span></div>`; });
             document.getElementById('topMerchantsList').innerHTML = merchantHTML || '<p class="text-xs text-gray-400">데이터 없음</p>';
 
-            annualPieInstance.setOption({
-                tooltip: { trigger: 'item' },
-                series: [{
-                    type: 'pie', radius: ['40%', '70%'],
-                    data: [
-                        {name: '주말 지출', value: Math.round(weekendExp), itemStyle: {color: '#f472b6'}},
-                        {name: '평일 지출', value: Math.round(weekdayExp), itemStyle: {color: '#60a5fa'}}
-                    ]
-                }]
+            annualPieInstance.setOption({ tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['40%', '70%'], data: [{name: '주말 지출', value: Math.round(weekendExp), itemStyle: {color: '#f472b6'}}, {name: '평일 지출', value: Math.round(weekdayExp), itemStyle: {color: '#60a5fa'}}] }] });
+            annualBarInstance.setOption({ tooltip: { trigger: 'axis' }, xAxis: { type: 'category', data: Object.keys(quarterlyExp) }, yAxis: { show: false }, series: [{ name: '분기별 지출', type: 'bar', data: Object.values(quarterlyExp).map(v => Math.round(v)), itemStyle: {color: '#818cf8'}, label: {show: true, position: 'top', formatter: (p) => p.value > 0 ? (p.value/10000).toFixed(0)+'만' : ''} }] });
+        }
+
+        // ⭐ 탭 3: 투자 관리 스크립트 로직 (야후 파이낸스 무료 API 연동)
+        document.getElementById('addAccountBtn').addEventListener('click', () => {
+            let name = prompt("새로운 계좌(포트폴리오) 별명을 입력하세요\n예: '더샵 센트럴파크 잔금', '딸 대학자금'");
+            if(name && name.trim() !== "") {
+                portfolios.push({ id: Date.now(), name: name.trim(), stocks: [] });
+                savePortfolios();
+                renderPortfolios();
+            }
+        });
+
+        window.addStock = function(accountId) {
+            let ticker = prompt("종목 티커를 입력하세요.\n(한국: 종목코드.KS 또는 .KQ / 미국: 영문티커)\n예: 삼성전자 -> 005930.KS / 애플 -> AAPL");
+            if(!ticker) return;
+            let qty = parseFloat(prompt("보유 수량을 입력하세요."));
+            let avgPrice = parseFloat(prompt("매수 평균 단가를 입력하세요."));
+            if(isNaN(qty) || isNaN(avgPrice)) return alert("수량과 단가는 숫자로 입력해주세요.");
+
+            let account = portfolios.find(p => p.id === accountId);
+            if(account) {
+                // currentPrice는 API 갱신 전까지 매수단가로 임시 세팅
+                account.stocks.push({ id: Date.now(), ticker: ticker.toUpperCase(), qty: qty, avgPrice: avgPrice, currentPrice: avgPrice });
+                savePortfolios();
+                renderPortfolios();
+            }
+        };
+
+        window.deleteStock = function(accountId, stockId) {
+            if(confirm("이 종목을 삭제하시겠습니까?")) {
+                let account = portfolios.find(p => p.id === accountId);
+                account.stocks = account.stocks.filter(s => s.id !== stockId);
+                savePortfolios();
+                renderPortfolios();
+            }
+        };
+
+        window.deleteAccount = function(accountId) {
+            if(confirm("이 계좌를 통째로 삭제하시겠습니까?")) {
+                portfolios = portfolios.filter(p => p.id !== accountId);
+                savePortfolios();
+                renderPortfolios();
+            }
+        };
+
+        function savePortfolios() {
+            localStorage.setItem('myPortfolios', JSON.stringify(portfolios));
+        }
+
+        function renderPortfolios() {
+            const listEl = document.getElementById('portfolioList');
+            listEl.innerHTML = '';
+            
+            let grandTotalCost = 0;
+            let grandTotalVal = 0;
+
+            portfolios.forEach(acc => {
+                let accCost = 0;
+                let accVal = 0;
+                let stocksHtml = '';
+
+                if(acc.stocks.length === 0) {
+                    stocksHtml = `<p class="text-xs text-gray-400 text-center py-2">등록된 종목이 없습니다.</p>`;
+                } else {
+                    acc.stocks.forEach(st => {
+                        // 환율 적용 로직 (티커에 .KS, .KQ가 없으면 달러로 간주)
+                        let isKRW = st.ticker.includes('.KS') || st.ticker.includes('.KQ');
+                        let exchangeRate = isKRW ? 1 : 환율; 
+                        
+                        let cost = st.qty * st.avgPrice * exchangeRate;
+                        let val = st.qty * st.currentPrice * exchangeRate;
+                        
+                        accCost += cost;
+                        accVal += val;
+
+                        let returnRate = cost > 0 ? ((val - cost) / cost * 100).toFixed(2) : 0;
+                        let colorClass = returnRate >= 0 ? 'text-red-500' : 'text-blue-500'; // 주식은 한국식(빨강 상승)
+                        let sign = returnRate > 0 ? '+' : '';
+
+                        stocksHtml += `
+                            <div class="flex justify-between items-center py-2 border-b border-gray-100 last:border-0">
+                                <div>
+                                    <p class="font-bold text-sm text-gray-800">${st.ticker}</p>
+                                    <p class="text-[10px] text-gray-500">${st.qty}주 | 평단가 ${st.avgPrice.toLocaleString()}${isKRW?'원':'$'}</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-bold text-sm text-gray-800">${Math.round(val).toLocaleString()}원</p>
+                                    <p class="text-[11px] font-bold ${colorClass}">${sign}${returnRate}%</p>
+                                </div>
+                                <button onclick="deleteStock(${acc.id}, ${st.id})" class="ml-2 text-gray-300 hover:text-red-500">×</button>
+                            </div>
+                        `;
+                    });
+                }
+
+                grandTotalCost += accCost;
+                grandTotalVal += accVal;
+
+                listEl.innerHTML += `
+                    <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 relative">
+                        <button onclick="deleteAccount(${acc.id})" class="absolute top-3 right-4 text-xs text-gray-300 hover:text-red-500">계좌삭제</button>
+                        <h3 class="font-bold text-blue-700 text-lg mb-1">${acc.name}</h3>
+                        <p class="text-xs text-gray-500 mb-3 border-b border-gray-200 pb-2">평가금액: <span class="font-bold text-gray-800">${Math.round(accVal).toLocaleString()}원</span></p>
+                        <div class="mb-3">${stocksHtml}</div>
+                        <button onclick="addStock(${acc.id})" class="w-full bg-blue-50 text-blue-600 text-xs font-bold py-2 rounded-lg hover:bg-blue-100 transition">+ 종목 추가</button>
+                    </div>
+                `;
             });
 
-            annualBarInstance.setOption({
-                tooltip: { trigger: 'axis' },
-                xAxis: { type: 'category', data: Object.keys(quarterlyExp) },
-                yAxis: { show: false },
-                series: [{
-                    name: '분기별 지출', type: 'bar', 
-                    data: Object.values(quarterlyExp).map(v => Math.round(v)), 
-                    itemStyle: {color: '#818cf8'},
-                    label: {show: true, position: 'top', formatter: (p) => p.value > 0 ? (p.value/10000).toFixed(0)+'만' : ''}
-                }]
-            });
+            // 상단 총합 KPI 업데이트
+            document.getElementById('totalInvestCost').innerText = Math.round(grandTotalCost).toLocaleString() + ' 원';
+            document.getElementById('totalInvestVal').innerText = Math.round(grandTotalVal).toLocaleString() + ' 원';
+            
+            let totalReturn = grandTotalCost > 0 ? ((grandTotalVal - grandTotalCost) / grandTotalCost * 100).toFixed(2) : 0;
+            let totalSign = totalReturn > 0 ? '+' : '';
+            let totalColor = totalReturn >= 0 ? 'text-red-300' : 'text-blue-300';
+            document.getElementById('totalInvestReturn').className = `font-bold ${totalColor}`;
+            document.getElementById('totalInvestReturn').innerText = `${totalSign}${totalReturn}%`;
         }
+
+        // 실시간 주가 갱신 API (AllOrigins 무료 프록시 + Yahoo Finance)
+        document.getElementById('refreshPricesBtn').addEventListener('click', async () => {
+            if(portfolios.length === 0) return alert("등록된 계좌가 없습니다.");
+            const btn = document.getElementById('refreshPricesBtn');
+            btn.innerText = "⏳ 갱신 중...";
+            btn.disabled = true;
+
+            let updatedCount = 0;
+            for(let acc of portfolios) {
+                for(let st of acc.stocks) {
+                    try {
+                        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${st.ticker}`;
+                        const res = await fetch(`https://api.allorigins.io/get?url=${encodeURIComponent(url)}`);
+                        if(res.ok) {
+                            const data = await res.json();
+                            const parsed = JSON.parse(data.contents);
+                            const price = parsed.chart.result[0].meta.regularMarketPrice;
+                            if(price) {
+                                st.currentPrice = price;
+                                updatedCount++;
+                            }
+                        }
+                    } catch(e) {
+                        console.error(`${st.ticker} 갱신 실패`);
+                    }
+                }
+            }
+
+            savePortfolios();
+            renderPortfolios();
+            btn.innerText = "🔄 실시간 주가 갱신";
+            btn.disabled = false;
+            alert(`${updatedCount}개 종목의 주가가 갱신되었습니다.`);
+        });
     </script>
 </body>
 </html>
