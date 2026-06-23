@@ -16,15 +16,16 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .clickable-card { cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
         .clickable-card:active { transform: scale(0.98); }
-        .editable-cell { cursor: pointer; border-bottom: 1px dashed #cbd5e1; }
+        .editable-cell { cursor: pointer; border-bottom: 1px dashed #cbd5e1; transition: color 0.2s; }
         .editable-cell:hover { background-color: #f8fafc; color: #2563eb; }
-        .cat-badge { cursor: pointer; user-select: none; transition: background-color 0.2s; }
-        .cat-badge:hover { filter: brightness(0.9); }
+        .toggle-btn { cursor: pointer; user-select: none; transition: transform 0.1s; }
+        .toggle-btn:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
         
+        <!-- 상단 헤더 & 컨트롤 패널 -->
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
             <div class="flex justify-between items-center mb-2">
                 <h1 class="text-xl font-bold">우리 부부 가계부</h1>
@@ -46,8 +47,10 @@
             </div>
         </div>
 
+        <!-- 탭 1: 월간 대시보드 -->
         <div id="tab-monthly" class="p-5 space-y-6">
             
+            <!-- 자산 현황 -->
             <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
                     <p class="text-gray-500 text-sm font-medium">현재 총 자산</p>
@@ -59,6 +62,7 @@
                 </div>
             </div>
 
+            <!-- 월 네비게이션 -->
             <div class="flex justify-between items-center bg-white rounded-full shadow-sm p-2 border border-gray-200">
                 <button id="prevMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">◀</button>
                 <div class="text-center">
@@ -68,26 +72,31 @@
                 <button id="nextMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">▶</button>
             </div>
 
+            <!-- 요약 (터치 시 필터링) -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-green-50 rounded-xl p-4 border border-green-100 col-span-2">
                     <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
                     <p id="totalIncome" class="text-xl font-bold text-gray-800 mt-1">0 원</p>
                 </div>
+                <!-- 변동지출 카드 -->
                 <div id="varExpenseCard" class="bg-red-50 rounded-xl p-4 border border-red-100 clickable-card" onclick="filterByCategory('변동지출')">
-                    <p class="text-red-600 text-xs font-bold">변동 지출 <span class="text-[10px] font-normal text-gray-400">(터치)</span></p>
+                    <p class="text-red-600 text-xs font-bold">변동 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="varExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
+                <!-- 고정지출 카드 -->
                 <div id="fixedExpenseCard" class="bg-orange-50 rounded-xl p-4 border border-orange-100 clickable-card" onclick="filterByCategory('고정지출')">
-                    <p class="text-orange-600 text-xs font-bold">고정 지출 <span class="text-[10px] font-normal text-gray-400">(터치)</span></p>
+                    <p class="text-orange-600 text-xs font-bold">고정 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="fixedExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
             </div>
 
+            <!-- 생키 다이어그램 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
-                <h3 class="font-bold text-gray-700 mb-2">지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트 터치 시 필터링)</span></h3>
+                <h3 class="font-bold text-gray-700 mb-2">지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트 터치 시 표 연동)</span></h3>
                 <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
             </div>
 
+            <!-- 카테고리별 예산 관리 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-gray-700">카테고리별 예산 현황</h3>
@@ -102,6 +111,7 @@
                 </div>
             </div>
 
+            <!-- 지출 내역 표 (수정 & 상태 토글) -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100" id="transactionTableSection">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-gray-700">지출 상세 내역</h3>
@@ -112,15 +122,15 @@
                         <option disabled>──────────</option>
                     </select>
                 </div>
-                <p class="text-[10px] text-gray-400 mb-2">* 카테고리를 눌러 고정/변동 전환, 텍스트를 눌러 직접 수정</p>
+                <p class="text-[10px] text-gray-400 mb-2">* 앞의 [변동/고정] 버튼을 눌러 영구 키워드 설정, 텍스트를 눌러 직접 수정</p>
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-full text-left text-xs whitespace-nowrap">
                         <thead class="bg-gray-100 text-gray-600">
                             <tr>
-                                <th class="p-2 rounded-l-lg">날짜</th>
-                                <th class="p-2">카테고리</th>
+                                <th class="p-2 rounded-l-lg w-10">날짜</th>
+                                <th class="p-2 w-16">카테고리</th>
                                 <th class="p-2">결제처(내용)</th>
-                                <th class="p-2 text-right rounded-r-lg">금액</th>
+                                <th class="p-2 text-right rounded-r-lg w-20">금액</th>
                             </tr>
                         </thead>
                         <tbody id="transactionTableBody" class="divide-y divide-gray-100">
@@ -131,6 +141,7 @@
             </div>
         </div>
 
+        <!-- 탭 2: 연간 결산 -->
         <div id="tab-annual" class="p-5 space-y-6 hide">
             <h2 class="text-2xl font-bold text-gray-800 mb-2">연간 결산 리포트</h2>
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -151,15 +162,15 @@
 
     <script>
         let globalData = [];
-        let globalAssetsRaw = []; // 엑셀 내보내기용 원본 자산 데이터 유지
+        let globalAssetsRaw = []; 
         let globalAssets = 0;
         let currentDate = new Date(2026, 5, 1);
         let currentMonthExpenses = {}; 
         let currentFilteredData = [];
         let coupangMatches = [];
 
-        // 커스텀 고정 지출 카테고리 (로컬 스토리지 연동)
-        let userFixedCats = JSON.parse(localStorage.getItem('userFixedCats')) || ['주거/통신', '금융/보험', '교육', '대출/이자'];
+        // ⭐ 스마트 키워드 고정지출 연동 (로컬 스토리지에 영구 저장)
+        let userFixedKeywords = JSON.parse(localStorage.getItem('userFixedKeywords')) || [];
 
         const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
@@ -181,26 +192,20 @@
         };
 
         document.getElementById('clearDataBtn').addEventListener('click', () => {
-            if(confirm("저장된 가계부 데이터를 모두 초기화하시겠습니까?")) {
+            if(confirm("저장된 가계부 데이터와 설정된 고정지출 키워드를 모두 초기화하시겠습니까?")) {
                 localStorage.clear();
                 location.reload();
             }
         });
 
-        // 엑셀 내보내기 기능
+        // 엑셀 내보내기 (수정 내역 반영)
         document.getElementById('exportExcelBtn').addEventListener('click', () => {
             if(globalData.length === 0) return alert('내보낼 데이터가 없습니다.');
-            
             const wb = XLSX.utils.book_new();
-            
-            // 뱅샐현황 시트 복구
             const wsAssets = XLSX.utils.aoa_to_sheet(globalAssetsRaw);
             XLSX.utils.book_append_sheet(wb, wsAssets, "뱅샐현황");
-
-            // 수정한 가계부 내역 시트
             const wsLedger = XLSX.utils.json_to_sheet(globalData);
             XLSX.utils.book_append_sheet(wb, wsLedger, "가계부 내역");
-
             XLSX.writeFile(wb, "수정된_우리부부_가계부.xlsx");
         });
 
@@ -221,17 +226,13 @@
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                
-                // 원본 데이터를 그대로 유지하기 위해 2D 배열로 저장
                 globalAssetsRaw = XLSX.utils.sheet_to_json(workbook.Sheets['뱅샐현황'], {header: 1, defval: ""});
                 parseExactAssets(globalAssetsRaw);
-                
                 globalData = XLSX.utils.sheet_to_json(workbook.Sheets['가계부 내역']);
                 
                 localStorage.setItem('mySavedLedgerData', JSON.stringify(globalData));
                 localStorage.setItem('mySavedAssetsRaw', JSON.stringify(globalAssetsRaw));
                 localStorage.setItem('mySavedAssets', globalAssets);
-                
                 updateDashboard();
             };
             reader.readAsArrayBuffer(file);
@@ -243,10 +244,10 @@
                 let row = aoaData[i];
                 let rowStr = JSON.stringify(row).replace(/\s+/g, '');
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
-                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) { break; }
+                if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) break;
 
                 if (inFinance) {
-                    let valRaw = row[4]; // E열
+                    let valRaw = row[4]; 
                     if (valRaw !== undefined && valRaw !== "") {
                         let val = Number(String(valRaw).replace(/,/g, ''));
                         if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
@@ -272,7 +273,7 @@
                 const dateMatch = line.match(/(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/);
                 if(dateMatch) {
                     let itemDesc = line.replace(dateMatch[0], '').replace(/[0-9,]+원?/, '').trim();
-                    if(itemDesc) { coupangMatches.push({ month: parseInt(dateMatch[2]), day: parseInt(dateMatch[3]), item: itemDesc.substring(0, 15) }); }
+                    if(itemDesc) coupangMatches.push({ month: parseInt(dateMatch[2]), day: parseInt(dateMatch[3]), item: itemDesc.substring(0, 15) });
                 }
             });
             localStorage.setItem('mySavedCoupang', JSON.stringify(coupangMatches));
@@ -316,8 +317,7 @@
                     if (isNaN(amount) || type === '이체') return;
 
                     if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) {
-                        type = '지출';
-                        amount = -amount; 
+                        type = '지출'; amount = -amount; 
                     }
 
                     if (type === '수입') {
@@ -325,25 +325,34 @@
                     } else if (type === '지출') {
                         amount = Math.abs(amount);
                         
-                        // 고정/변동 판별 (로컬스토리지 기준)
-                        let isFixed = userFixedCats.includes(cat);
+                        let rawDesc = String(row['내용']);
+                        
+                        // ⭐ 키워드 기반 고정/변동 판별 로직
+                        let isFixed = false;
+                        for (let kw of userFixedKeywords) {
+                            if (rawDesc.includes(kw)) {
+                                isFixed = true; break;
+                            }
+                        }
+
                         if (isFixed) fixedExp += amount;
                         else varExp += amount;
 
                         currentMonthExpenses[cat] = (currentMonthExpenses[cat] || 0) + amount;
                         catSet.add(cat);
 
-                        let desc = String(row['내용']);
-                        if(desc.includes('쿠팡') && coupangMatches.length > 0) {
+                        let displayDesc = rawDesc;
+                        if(rawDesc.includes('쿠팡') && coupangMatches.length > 0) {
                             let match = coupangMatches.find(c => c.month === (dateObj.getMonth() + 1) && c.day === dateObj.getDate());
-                            if(match) desc = `[${match.item}] ` + desc;
+                            if(match) displayDesc = `[${match.item}] ` + rawDesc;
                         }
 
                         currentFilteredData.push({ 
-                            globalIndex: index, // 원본 수정을 위한 인덱스 저장
+                            globalIndex: index, 
                             date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, 
                             cat: cat, 
-                            desc: desc, 
+                            rawDesc: rawDesc, // 원본 내용 유지
+                            desc: displayDesc, // 표시용 내용
                             amount: Math.round(amount),
                             isFixed: isFixed
                         });
@@ -356,7 +365,7 @@
             document.getElementById('varExpense').innerText = Math.round(varExp).toLocaleString() + ' 원';
 
             const filterEl = document.getElementById('tableFilter');
-            let currentFilter = filterEl.value; // 유지
+            let currentFilter = filterEl.value; 
             filterEl.innerHTML = `<option value="전체">전체 보기</option><option value="고정지출">📌 고정지출만</option><option value="변동지출">📊 변동지출만</option><option disabled>──────────</option>`;
             catSet.forEach(c => {
                 if(!['전체','고정지출','변동지출'].includes(c)) filterEl.innerHTML += `<option value="${c}">${c}</option>`;
@@ -368,18 +377,37 @@
             renderTable(filterEl.value);
         }
 
-        // ⭐ 카테고리 고정/변동 영구 전환
-        window.toggleFixedCat = function(cat) {
-            if(userFixedCats.includes(cat)) {
-                userFixedCats = userFixedCats.filter(c => c !== cat);
-            } else {
-                userFixedCats.push(cat);
+        // ⭐ 지출 내역 고정/변동 원터치 전환 기능 (키워드 추출)
+        window.toggleTransactionFixed = function(globalIndex) {
+            let row = globalData[globalIndex];
+            let rawDesc = String(row['내용']);
+            
+            // 현재 설정된 키워드가 있는지 확인
+            let matchedKw = null;
+            for(let kw of userFixedKeywords) {
+                if(rawDesc.includes(kw)) { matchedKw = kw; break; }
             }
-            localStorage.setItem('userFixedCats', JSON.stringify(userFixedCats));
-            updateDashboard();
+
+            if (matchedKw) {
+                // 이미 고정지출인 경우 -> 해제
+                if(confirm(`이 지출은 [${matchedKw}] 키워드로 인해 영구 고정지출로 설정되어 있습니다.\n\n고정지출에서 해제(변동지출로 전환)하시겠습니까?`)) {
+                    userFixedKeywords = userFixedKeywords.filter(k => k !== matchedKw);
+                    localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
+                    updateDashboard();
+                }
+            } else {
+                // 변동지출인 경우 -> 고정지출로 등록
+                let newKw = prompt(`이 지출을 고정지출로 영구 등록합니다.\n\n매월 공통으로 포함되는 핵심 단어(키워드)를 입력하세요.\n(예: '4월 전기세' -> '전기세')\n\n이 단어가 포함된 과거/미래의 모든 지출이 고정지출로 분류됩니다.`, rawDesc);
+                
+                if (newKw !== null && newKw.trim() !== '') {
+                    userFixedKeywords.push(newKw.trim());
+                    localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
+                    updateDashboard();
+                }
+            }
         }
 
-        // ⭐ 지출 내역 직접 수정
+        // 지출 내역 텍스트 직접 수정 기능
         window.editTransaction = function(idx, fieldName, isAmount) {
             let row = globalData[idx];
             let oldVal = isAmount ? Math.abs(row[fieldName]) : row[fieldName];
@@ -389,7 +417,6 @@
                 if(isAmount) {
                     newVal = Number(newVal);
                     if(isNaN(newVal)) return alert("숫자만 입력 가능합니다.");
-                    // 지출의 경우 엑셀 원본엔 음수로 저장되므로 원상복구
                     if (row['타입'] === '지출' && newVal > 0) newVal = -newVal;
                 }
                 globalData[idx][fieldName] = newVal;
@@ -420,16 +447,23 @@
             });
 
             filtered.forEach(row => {
-                let badgeClass = row.isFixed ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-50 text-blue-600 border border-blue-200";
-                
+                // 상태에 따른 배지 디자인
+                let badgeClass = row.isFixed ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-gray-100 text-gray-500 border border-gray-200";
+                let badgeText = row.isFixed ? "📌 고정" : "📊 변동";
+
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                        <td class="p-2 text-gray-500">${row.date}</td>
-                        <td class="p-2">
-                            <span onclick="toggleFixedCat('${row.cat}')" class="cat-badge px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}" title="눌러서 고정/변동 전환">${row.cat}</span>
+                        <td class="p-2 text-gray-500 text-[11px] align-middle">${row.date}</td>
+                        <td class="p-2 align-middle">
+                            <span class="text-[10px] text-gray-400 block mb-0.5">${row.cat}</span>
                         </td>
-                        <td class="p-2 text-gray-800 truncate max-w-[120px] editable-cell" onclick="editTransaction(${row.globalIndex}, '내용', false)" title="눌러서 이름 수정">${row.desc}</td>
-                        <td class="p-2 text-right font-bold text-red-500 editable-cell" onclick="editTransaction(${row.globalIndex}, '금액', true)" title="눌러서 금액 수정">-${row.amount.toLocaleString()}</td>
+                        <td class="p-2 text-gray-800 text-[13px] align-middle">
+                            <div class="flex items-center gap-1.5">
+                                <span onclick="toggleTransactionFixed(${row.globalIndex})" class="toggle-btn px-1.5 py-0.5 rounded text-[10px] font-bold ${badgeClass}" title="눌러서 고정/변동 전환">${badgeText}</span>
+                                <span class="editable-cell truncate max-w-[120px]" onclick="editTransaction(${row.globalIndex}, '내용', false)" title="눌러서 이름 수정">${row.desc}</span>
+                            </div>
+                        </td>
+                        <td class="p-2 text-right font-bold text-red-500 editable-cell align-middle" onclick="editTransaction(${row.globalIndex}, '금액', true)" title="눌러서 금액 수정">-${row.amount.toLocaleString()}</td>
                     </tr>
                 `;
             });
