@@ -25,7 +25,6 @@
 <body>
     <div class="max-w-md mx-auto bg-white min-h-screen shadow-lg relative">
         
-        <!-- 상단 헤더 & 컨트롤 패널 -->
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
             <div class="flex justify-between items-center mb-2">
                 <h1 class="text-xl font-bold">우리 부부 가계부</h1>
@@ -47,10 +46,8 @@
             </div>
         </div>
 
-        <!-- 탭 1: 월간 대시보드 -->
         <div id="tab-monthly" class="p-5 space-y-6">
             
-            <!-- 자산 현황 -->
             <div class="bg-gray-50 rounded-2xl p-5 shadow-sm border border-gray-100 flex justify-between items-center">
                 <div>
                     <p class="text-gray-500 text-sm font-medium">현재 총 자산</p>
@@ -62,7 +59,6 @@
                 </div>
             </div>
 
-            <!-- 월 네비게이션 -->
             <div class="flex justify-between items-center bg-white rounded-full shadow-sm p-2 border border-gray-200">
                 <button id="prevMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">◀</button>
                 <div class="text-center">
@@ -72,31 +68,26 @@
                 <button id="nextMonth" class="px-4 py-2 text-gray-500 hover:text-blue-600 font-bold">▶</button>
             </div>
 
-            <!-- 요약 (터치 시 필터링) -->
             <div class="grid grid-cols-2 gap-3">
                 <div class="bg-green-50 rounded-xl p-4 border border-green-100 col-span-2">
                     <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
                     <p id="totalIncome" class="text-xl font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <!-- 변동지출 카드 -->
                 <div id="varExpenseCard" class="bg-red-50 rounded-xl p-4 border border-red-100 clickable-card" onclick="filterByCategory('변동지출')">
                     <p class="text-red-600 text-xs font-bold">변동 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="varExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <!-- 고정지출 카드 -->
                 <div id="fixedExpenseCard" class="bg-orange-50 rounded-xl p-4 border border-orange-100 clickable-card" onclick="filterByCategory('고정지출')">
                     <p class="text-orange-600 text-xs font-bold">고정 지출 <span class="text-[10px] font-normal text-gray-400">(터치시 표 연동)</span></p>
                     <p id="fixedExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
             </div>
 
-            <!-- 생키 다이어그램 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
                 <h3 class="font-bold text-gray-700 mb-2">지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트 터치 시 표 연동)</span></h3>
                 <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
             </div>
 
-            <!-- 카테고리별 예산 관리 -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="font-bold text-gray-700">카테고리별 예산 현황</h3>
@@ -111,7 +102,6 @@
                 </div>
             </div>
 
-            <!-- 지출 내역 표 (수정 & 상태 토글) -->
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100" id="transactionTableSection">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-gray-700">지출 상세 내역</h3>
@@ -141,16 +131,53 @@
             </div>
         </div>
 
-        <!-- 탭 2: 연간 결산 -->
         <div id="tab-annual" class="p-5 space-y-6 hide">
-            <h2 class="text-2xl font-bold text-gray-800 mb-2">연간 결산 리포트</h2>
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-2">월별 추이</h3>
-                <div id="annualBarChart" style="width: 100%; height: 250px;"></div>
+            <div class="mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">연간 결산 리포트</h2>
+                <p class="text-sm text-gray-500">업로드된 데이터(1년 치) 종합 분석</p>
             </div>
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-blue-50 p-4 rounded-xl border border-blue-100 col-span-2">
+                    <p class="text-blue-600 text-xs font-bold mb-1">연간 잉여 자금 (순수익)</p>
+                    <div class="flex justify-between items-end">
+                        <p id="annualSurplus" class="text-2xl font-bold text-gray-800">0 원</p>
+                        <p id="annualSavingsRate" class="text-sm font-bold text-blue-600 bg-white px-2 py-1 rounded shadow-sm">저축률 0%</p>
+                    </div>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                    <p class="text-orange-600 text-xs font-bold mb-1">숨만 쉬어도 나간 돈</p>
+                    <p id="annualFixed" class="text-lg font-bold text-gray-800">0 원</p>
+                </div>
+                <div class="bg-pink-50 p-4 rounded-xl border border-pink-100">
+                    <p class="text-pink-600 text-xs font-bold mb-1">육아/출산 총비용</p>
+                    <p id="annualBaby" class="text-lg font-bold text-gray-800">0 원</p>
+                </div>
+                <div class="bg-gray-100 p-4 rounded-xl border border-gray-200">
+                    <p class="text-gray-600 text-xs font-bold mb-1">자동차 유지비</p>
+                    <p id="annualCar" class="text-lg font-bold text-gray-800">0 원</p>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                    <p class="text-indigo-600 text-xs font-bold mb-1">식비 구조 (배달 vs 장보기)</p>
+                    <p id="annualFoodCompare" class="text-[11px] font-bold text-gray-700 leading-snug">배달/외식: 0%<br>장보기: 0%</p>
+                </div>
+            </div>
+
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <h3 class="font-bold text-gray-700 mb-2">지출 카테고리 TOP</h3>
-                <div id="annualPieChart" style="width: 100%; height: 300px;"></div>
+                <h3 class="font-bold text-gray-700 mb-3">최다 지출 가맹점 TOP 5</h3>
+                <div id="topMerchantsList" class="space-y-2">
+                    <p class="text-xs text-gray-400">데이터가 없습니다.</p>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-2">주말 vs 평일 지출 패턴</h3>
+                <div id="annualPieChart" style="width: 100%; height: 250px;"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-700 mb-2">분기별 지출 트렌드</h3>
+                <div id="annualBarChart" style="width: 100%; height: 250px;"></div>
             </div>
         </div>
 
@@ -169,8 +196,8 @@
         let currentFilteredData = [];
         let coupangMatches = [];
 
-        // ⭐ 스마트 키워드 고정지출 연동 (로컬 스토리지에 영구 저장)
-        let userFixedKeywords = JSON.parse(localStorage.getItem('userFixedKeywords')) || [];
+        // 커스텀 고정지출 키워드
+        let userFixedKeywords = JSON.parse(localStorage.getItem('userFixedKeywords')) || ['주거/통신', '금융/보험', '교육', '대출/이자'];
 
         const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
@@ -198,7 +225,6 @@
             }
         });
 
-        // 엑셀 내보내기 (수정 내역 반영)
         document.getElementById('exportExcelBtn').addEventListener('click', () => {
             if(globalData.length === 0) return alert('내보낼 데이터가 없습니다.');
             const wb = XLSX.utils.book_new();
@@ -238,20 +264,34 @@
             reader.readAsArrayBuffer(file);
         });
 
+        // ⭐ 철갑 방어를 씌운 스마트 자산 파싱 로직
         function parseExactAssets(aoaData) {
-            let total = 0; let inFinance = false;
+            let total = 0; let inFinance = false; let assetColIdx = -1;
             for (let i = 0; i < aoaData.length; i++) {
-                let row = aoaData[i];
+                let row = aoaData[i] || [];
                 let rowStr = JSON.stringify(row).replace(/\s+/g, '');
+                
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
                 if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) break;
 
                 if (inFinance) {
-                    let valRaw = row[4]; 
-                    if (valRaw !== undefined && valRaw !== "") {
-                        let val = Number(String(valRaw).replace(/,/g, ''));
-                        if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
-                            total += val;
+                    // 항목, 상품명, 금액이 나오는 헤더 줄을 찾아서 정확한 '금액' 기둥 번호를 스캔
+                    if (rowStr.includes('항목') && rowStr.includes('금액') && assetColIdx === -1) {
+                        for(let c=0; c<row.length; c++) {
+                            if(String(row[c]).trim() === '금액') {
+                                assetColIdx = c;
+                                break;
+                            }
+                        }
+                        continue;
+                    }
+                    
+                    // 찾아낸 기둥 번호로만 핀포인트 합산 (칸이 밀려도 무적)
+                    if (assetColIdx !== -1 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
+                        let valRaw = row[assetColIdx];
+                        if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
+                            let val = Number(String(valRaw).replace(/,/g, ''));
+                            if (!isNaN(val) && val > 0) total += val;
                         }
                     }
                 }
@@ -327,10 +367,10 @@
                         
                         let rawDesc = String(row['내용']);
                         
-                        // ⭐ 키워드 기반 고정/변동 판별 로직
+                        // 키워드 기반 고정/변동 판별
                         let isFixed = false;
                         for (let kw of userFixedKeywords) {
-                            if (rawDesc.includes(kw)) {
+                            if (rawDesc.includes(kw) || cat.includes(kw)) {
                                 isFixed = true; break;
                             }
                         }
@@ -351,8 +391,8 @@
                             globalIndex: index, 
                             date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, 
                             cat: cat, 
-                            rawDesc: rawDesc, // 원본 내용 유지
-                            desc: displayDesc, // 표시용 내용
+                            rawDesc: rawDesc,
+                            desc: displayDesc, 
                             amount: Math.round(amount),
                             isFixed: isFixed
                         });
@@ -377,28 +417,24 @@
             renderTable(filterEl.value);
         }
 
-        // ⭐ 지출 내역 고정/변동 원터치 전환 기능 (키워드 추출)
         window.toggleTransactionFixed = function(globalIndex) {
             let row = globalData[globalIndex];
             let rawDesc = String(row['내용']);
+            let cat = String(row['대분류']);
             
-            // 현재 설정된 키워드가 있는지 확인
             let matchedKw = null;
             for(let kw of userFixedKeywords) {
-                if(rawDesc.includes(kw)) { matchedKw = kw; break; }
+                if(rawDesc.includes(kw) || cat.includes(kw)) { matchedKw = kw; break; }
             }
 
             if (matchedKw) {
-                // 이미 고정지출인 경우 -> 해제
-                if(confirm(`이 지출은 [${matchedKw}] 키워드로 인해 영구 고정지출로 설정되어 있습니다.\n\n고정지출에서 해제(변동지출로 전환)하시겠습니까?`)) {
+                if(confirm(`이 항목은 [${matchedKw}] 키워드로 인해 영구 고정지출로 묶여 있습니다.\n해제하시겠습니까?`)) {
                     userFixedKeywords = userFixedKeywords.filter(k => k !== matchedKw);
                     localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
                     updateDashboard();
                 }
             } else {
-                // 변동지출인 경우 -> 고정지출로 등록
-                let newKw = prompt(`이 지출을 고정지출로 영구 등록합니다.\n\n매월 공통으로 포함되는 핵심 단어(키워드)를 입력하세요.\n(예: '4월 전기세' -> '전기세')\n\n이 단어가 포함된 과거/미래의 모든 지출이 고정지출로 분류됩니다.`, rawDesc);
-                
+                let newKw = prompt(`고정지출로 묶을 공통 키워드(단어)를 입력하세요.\n예: '4월 전기요금' -> '전기요금'`, rawDesc);
                 if (newKw !== null && newKw.trim() !== '') {
                     userFixedKeywords.push(newKw.trim());
                     localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
@@ -407,7 +443,6 @@
             }
         }
 
-        // 지출 내역 텍스트 직접 수정 기능
         window.editTransaction = function(idx, fieldName, isAmount) {
             let row = globalData[idx];
             let oldVal = isAmount ? Math.abs(row[fieldName]) : row[fieldName];
@@ -447,7 +482,6 @@
             });
 
             filtered.forEach(row => {
-                // 상태에 따른 배지 디자인
                 let badgeClass = row.isFixed ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-gray-100 text-gray-500 border border-gray-200";
                 let badgeText = row.isFixed ? "📌 고정" : "📊 변동";
 
@@ -481,7 +515,6 @@
             document.getElementById('transactionTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
-        // --- 이하 차트 및 예산 관리 로직 (기존 동일) --- //
         document.getElementById('toggleBudgetBtn').addEventListener('click', () => {
             const area = document.getElementById('budgetSetupArea');
             area.classList.toggle('hide');
@@ -494,7 +527,6 @@
             const allCats = Array.from(new Set([...Object.keys(currentMonthExpenses), ...Object.keys(saved)]));
             const container = document.getElementById('budgetInputs');
             container.innerHTML = '';
-            
             allCats.forEach(cat => {
                 container.innerHTML += `
                     <div class="flex items-center gap-2 mb-2">
@@ -519,14 +551,12 @@
             const saved = JSON.parse(localStorage.getItem(`budget_${y}_${m}`)) || {};
             const container = document.getElementById('categoryProgressList');
             container.innerHTML = '';
-
             let hasBudget = false;
             Object.keys(saved).forEach(cat => {
                 hasBudget = true;
                 let budget = saved[cat]; let spent = currentMonthExpenses[cat] || 0;
                 let percent = Math.min((spent / budget) * 100, 100);
                 let color = percent < 80 ? 'bg-green-500' : (percent < 100 ? 'bg-yellow-400' : 'bg-red-500');
-                
                 container.innerHTML += `
                     <div class="clickable-cat" onclick="filterByCategory('${cat}')">
                         <div class="flex justify-between text-xs mb-1">
@@ -544,7 +574,6 @@
 
         function renderSankey(income, expense, categories) {
             if (income === 0 && expense === 0) { sankeyInstance.clear(); return; }
-
             let nodes = [{name: '수입'}, {name: '지출'}];
             let links = [];
             let remaining = income - expense;
@@ -573,35 +602,111 @@
             });
         }
 
+        // ⭐ 새롭게 탄생한 연간 결산 로직 (8개 기능 탑재)
         function renderAnnual() {
             if(globalData.length === 0) return;
-            let monthlyStats = {}; let totalCats = {};
+            
+            let totalInc = 0; let totalExp = 0; let totalFixed = 0; 
+            let totalBaby = 0; let totalCar = 0;
+            let dining = 0; let grocery = 0;
+            let weekendExp = 0; let weekdayExp = 0;
+            let merchants = {};
+            let quarterlyExp = { '1분기': 0, '2분기': 0, '3분기': 0, '4분기': 0 };
+
             globalData.forEach(row => {
                 let dStr = row['날짜'];
                 let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
-                let y = dateObj.getFullYear(); let m = dateObj.getMonth() + 1; let d = dateObj.getDate();
-                if (d < 10) { m -= 1; if (m === 0) { m = 12; y -= 1; } }
-                let key = `${y}-${String(m).padStart(2,'0')}`;
-                if(!monthlyStats[key]) monthlyStats[key] = {inc:0, exp:0};
+                let type = row['타입']; let cat = String(row['대분류'] || '미분류'); 
+                let subCat = String(row['소분류'] || ''); let desc = String(row['내용']);
+                let amount = Number(row['금액']);
                 
-                let type = row['타입']; let amount = Number(row['금액']);
                 if(isNaN(amount) || type === '이체') return;
-                
-                if (type === '수입') monthlyStats[key].inc += amount;
-                else { amount = Math.abs(amount); monthlyStats[key].exp += amount; totalCats[row['대분류']||'미분류'] = (totalCats[row['대분류']||'미분류']||0) + amount; }
+                if (type === '수입' && ['온라인쇼핑', '식비', '생활', '패션/쇼핑', '의료/건강', '교통/차량'].includes(cat)) { type = '지출'; amount = -amount; }
+
+                if (type === '수입') {
+                    totalInc += amount;
+                } else if (type === '지출') {
+                    amount = Math.abs(amount);
+                    totalExp += amount;
+
+                    // 고정지출 합산
+                    let isFixed = userFixedKeywords.some(kw => desc.includes(kw) || cat.includes(kw));
+                    if(isFixed) totalFixed += amount;
+
+                    // 육아 & 자동차비
+                    if(cat === '자녀/육아') totalBaby += amount;
+                    if(cat === '자동차' || cat === '교통/차량') totalCar += amount;
+
+                    // 식비 구조 (배달/외식 vs 마트/장보기)
+                    if(subCat.includes('배달') || subCat.includes('외식')) dining += amount;
+                    else if(subCat.includes('마트') || subCat.includes('부식') || subCat.includes('식재료')) grocery += amount;
+                    else if(cat === '식비') dining += amount; // 애매하면 외식으로
+
+                    // 가맹점 랭킹용 (괄호나 특수문자 일부 제거하여 클린하게)
+                    let cleanDesc = desc.replace(/\[.*?\]|\(주\)|\(.*\)/g, '').trim();
+                    if(cleanDesc) merchants[cleanDesc] = (merchants[cleanDesc] || 0) + amount;
+
+                    // 주말/평일 계산
+                    let day = dateObj.getDay();
+                    if(day === 0 || day === 6) weekendExp += amount;
+                    else weekdayExp += amount;
+
+                    // 분기 계산
+                    let month = dateObj.getMonth() + 1;
+                    if(month <= 3) quarterlyExp['1분기'] += amount;
+                    else if(month <= 6) quarterlyExp['2분기'] += amount;
+                    else if(month <= 9) quarterlyExp['3분기'] += amount;
+                    else quarterlyExp['4분기'] += amount;
+                }
             });
 
-            let keys = Object.keys(monthlyStats).sort().slice(-12);
-            annualBarInstance.setOption({
-                tooltip: { trigger: 'axis' }, legend: { data: ['수입', '지출'] },
-                xAxis: { type: 'category', data: keys.map(k=>k.substring(2)) }, yAxis: { show: false },
-                series: [
-                    { name: '수입', type: 'bar', data: keys.map(k=>Math.round(monthlyStats[k].inc)), itemStyle: {color: '#34d399'} },
-                    { name: '지출', type: 'bar', data: keys.map(k=>Math.round(monthlyStats[k].exp)), itemStyle: {color: '#f87171'} }
-                ]
+            // 1. KPI 요약 업데이트
+            let surplus = totalInc - totalExp;
+            let savingsRate = totalInc > 0 ? (surplus / totalInc * 100).toFixed(1) : 0;
+            
+            document.getElementById('annualSurplus').innerText = Math.round(surplus).toLocaleString() + ' 원';
+            document.getElementById('annualSavingsRate').innerText = `저축률 ${savingsRate}%`;
+            document.getElementById('annualFixed').innerText = Math.round(totalFixed).toLocaleString() + ' 원';
+            document.getElementById('annualBaby').innerText = Math.round(totalBaby).toLocaleString() + ' 원';
+            document.getElementById('annualCar').innerText = Math.round(totalCar).toLocaleString() + ' 원';
+
+            let foodTotal = dining + grocery;
+            let diningPct = foodTotal > 0 ? Math.round((dining / foodTotal) * 100) : 0;
+            let groceryPct = foodTotal > 0 ? Math.round((grocery / foodTotal) * 100) : 0;
+            document.getElementById('annualFoodCompare').innerHTML = `<span class="text-red-500">배달/외식: ${diningPct}%</span><br><span class="text-green-600">장보기: ${groceryPct}%</span>`;
+
+            // 2. 가맹점 TOP 5
+            let sortedMerchants = Object.keys(merchants).map(k => ({name: k, val: merchants[k]})).sort((a,b)=>b.val-a.val).slice(0,5);
+            let merchantHTML = '';
+            sortedMerchants.forEach((m, idx) => {
+                merchantHTML += `<div class="flex justify-between items-center text-sm py-1.5 border-b border-gray-50 last:border-0"><span class="truncate w-2/3 text-gray-600">${idx+1}. ${m.name}</span><span class="font-bold text-gray-800">${Math.round(m.val).toLocaleString()}원</span></div>`;
             });
-            let pieData = Object.keys(totalCats).map(k=>({name:k, value:Math.round(totalCats[k])})).sort((a,b)=>b.value-a.value).slice(0,7);
-            annualPieInstance.setOption({ tooltip: { trigger: 'item' }, series: [{ type: 'pie', radius: ['40%', '70%'], data: pieData }] });
+            document.getElementById('topMerchantsList').innerHTML = merchantHTML || '<p class="text-xs text-gray-400">데이터 없음</p>';
+
+            // 3. 주말 vs 평일 파이 차트
+            annualPieInstance.setOption({
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie', radius: ['40%', '70%'],
+                    data: [
+                        {name: '주말 지출', value: Math.round(weekendExp), itemStyle: {color: '#f472b6'}},
+                        {name: '평일 지출', value: Math.round(weekdayExp), itemStyle: {color: '#60a5fa'}}
+                    ]
+                }]
+            });
+
+            // 4. 분기별 트렌드 바 차트
+            annualBarInstance.setOption({
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: Object.keys(quarterlyExp) },
+                yAxis: { show: false },
+                series: [{
+                    name: '분기별 지출', type: 'bar', 
+                    data: Object.values(quarterlyExp).map(v => Math.round(v)), 
+                    itemStyle: {color: '#818cf8'},
+                    label: {show: true, position: 'top', formatter: (p) => p.value > 0 ? (p.value/10000).toFixed(0)+'만' : ''}
+                }]
+            });
         }
     </script>
 </body>
