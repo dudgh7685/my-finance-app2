@@ -14,8 +14,12 @@
         .tab-inactive { color: #9ca3af; border-top: 3px solid transparent; }
         .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        .clickable-cat { cursor: pointer; transition: background-color 0.2s; padding: 4px; border-radius: 8px; }
-        .clickable-cat:hover { background-color: #f1f5f9; }
+        .clickable-card { cursor: pointer; transition: transform 0.1s, box-shadow 0.1s; }
+        .clickable-card:active { transform: scale(0.98); }
+        .editable-cell { cursor: pointer; border-bottom: 1px dashed #cbd5e1; }
+        .editable-cell:hover { background-color: #f8fafc; color: #2563eb; }
+        .cat-badge { cursor: pointer; user-select: none; transition: background-color 0.2s; }
+        .cat-badge:hover { filter: brightness(0.9); }
     </style>
 </head>
 <body>
@@ -24,7 +28,10 @@
         <div class="p-5 bg-blue-600 text-white rounded-b-3xl shadow-md space-y-3">
             <div class="flex justify-between items-center mb-2">
                 <h1 class="text-xl font-bold">우리 부부 가계부</h1>
-                <button id="clearDataBtn" class="text-xs bg-white text-blue-600 px-2 py-1 rounded shadow hover:bg-gray-100">데이터 초기화</button>
+                <div class="space-x-1">
+                    <button id="exportExcelBtn" class="text-xs bg-blue-800 text-white px-2 py-1 rounded shadow hover:bg-blue-900">엑셀 다운로드</button>
+                    <button id="clearDataBtn" class="text-xs bg-white text-red-500 px-2 py-1 rounded shadow hover:bg-gray-100">초기화</button>
+                </div>
             </div>
             
             <label class="flex flex-col items-center justify-center w-full p-2 border-2 border-white border-dashed rounded-xl cursor-pointer hover:bg-blue-700 transition">
@@ -33,8 +40,8 @@
             </label>
 
             <div class="w-full">
-                <label class="text-xs font-bold mb-1 block">2. 쿠팡 구매내역 복사해 넣기 (선택)</label>
-                <textarea id="coupangText" rows="2" class="w-full text-gray-800 text-xs p-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300" placeholder="예: 2026.06.20 하기스 네이처메이드 기저귀 21,500원..."></textarea>
+                <label class="text-xs font-bold mb-1 block">2. 쿠팡 구매내역 매칭 (선택)</label>
+                <textarea id="coupangText" rows="2" class="w-full text-gray-800 text-xs p-2 rounded-lg border-none focus:ring-2 focus:ring-blue-300" placeholder="예: 2026.06.20 기저귀 21,500원..."></textarea>
                 <button id="applyCoupangBtn" class="w-full mt-1 bg-blue-800 text-white text-xs py-1.5 rounded-lg hover:bg-blue-900 transition">내역 매칭하기</button>
             </div>
         </div>
@@ -66,14 +73,19 @@
                     <p class="text-green-600 text-xs font-bold">총 수입 (환불 제외)</p>
                     <p id="totalIncome" class="text-xl font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <div class="bg-red-50 rounded-xl p-4 border border-red-100">
-                    <p class="text-red-600 text-xs font-bold">변동 지출</p>
+                <div id="varExpenseCard" class="bg-red-50 rounded-xl p-4 border border-red-100 clickable-card" onclick="filterByCategory('변동지출')">
+                    <p class="text-red-600 text-xs font-bold">변동 지출 <span class="text-[10px] font-normal text-gray-400">(터치)</span></p>
                     <p id="varExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
-                <div class="bg-orange-50 rounded-xl p-4 border border-orange-100">
-                    <p class="text-orange-600 text-xs font-bold">고정 지출</p>
+                <div id="fixedExpenseCard" class="bg-orange-50 rounded-xl p-4 border border-orange-100 clickable-card" onclick="filterByCategory('고정지출')">
+                    <p class="text-orange-600 text-xs font-bold">고정 지출 <span class="text-[10px] font-normal text-gray-400">(터치)</span></p>
                     <p id="fixedExpense" class="text-lg font-bold text-gray-800 mt-1">0 원</p>
                 </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
+                <h3 class="font-bold text-gray-700 mb-2">지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트 터치 시 필터링)</span></h3>
+                <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
             </div>
 
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
@@ -81,29 +93,26 @@
                     <h3 class="font-bold text-gray-700">카테고리별 예산 현황</h3>
                     <button id="toggleBudgetBtn" class="text-xs text-white bg-blue-500 px-3 py-1.5 rounded-lg shadow">설정</button>
                 </div>
-                
                 <div id="budgetSetupArea" class="hide bg-gray-50 p-4 rounded-xl mb-4 border border-gray-200">
                     <div id="budgetInputs" class="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-2 mb-3"></div>
                     <button id="saveBudgetBtn" class="w-full mt-2 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm">저장 및 닫기</button>
                 </div>
-
                 <div id="categoryProgressList" class="space-y-3">
                     <p class="text-xs text-center text-gray-400">데이터가 없습니다.</p>
                 </div>
             </div>
 
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 overflow-hidden">
-                <h3 class="font-bold text-gray-700 mb-2">이번 달 지출 흐름도 <span class="text-xs text-gray-400 font-normal">(차트를 터치해보세요)</span></h3>
-                <div id="sankeyChart" style="width: 100%; height: 350px;"></div>
-            </div>
-
             <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100" id="transactionTableSection">
-                <div class="flex justify-between items-center mb-3">
+                <div class="flex justify-between items-center mb-2">
                     <h3 class="font-bold text-gray-700">지출 상세 내역</h3>
                     <select id="tableFilter" class="text-xs p-1 border rounded bg-gray-50 outline-none font-bold text-blue-600">
                         <option value="전체">전체 보기</option>
+                        <option value="고정지출">📌 고정지출만</option>
+                        <option value="변동지출">📊 변동지출만</option>
+                        <option disabled>──────────</option>
                     </select>
                 </div>
+                <p class="text-[10px] text-gray-400 mb-2">* 카테고리를 눌러 고정/변동 전환, 텍스트를 눌러 직접 수정</p>
                 <div class="overflow-x-auto custom-scrollbar">
                     <table class="w-full text-left text-xs whitespace-nowrap">
                         <thead class="bg-gray-100 text-gray-600">
@@ -142,43 +151,59 @@
 
     <script>
         let globalData = [];
+        let globalAssetsRaw = []; // 엑셀 내보내기용 원본 자산 데이터 유지
         let globalAssets = 0;
         let currentDate = new Date(2026, 5, 1);
         let currentMonthExpenses = {}; 
         let currentFilteredData = [];
         let coupangMatches = [];
 
-        const FIXED_CATEGORIES = ['주거/통신', '금융/보험', '교육'];
+        // 커스텀 고정 지출 카테고리 (로컬 스토리지 연동)
+        let userFixedCats = JSON.parse(localStorage.getItem('userFixedCats')) || ['주거/통신', '금융/보험', '교육', '대출/이자'];
 
         const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
         const annualBarInstance = echarts.init(document.getElementById('annualBarChart'));
         const annualPieInstance = echarts.init(document.getElementById('annualPieChart'));
 
-        // 초기 구동 시 저장된 데이터 불러오기 (새로고침 방어)
         window.onload = () => {
             const savedData = localStorage.getItem('mySavedLedgerData');
-            const savedAssets = localStorage.getItem('mySavedAssets');
+            const savedAssetsRaw = localStorage.getItem('mySavedAssetsRaw');
+            const savedAssetsVal = localStorage.getItem('mySavedAssets');
             const savedCoupang = localStorage.getItem('mySavedCoupang');
             
-            if(savedData && savedAssets) {
+            if(savedData && savedAssetsRaw) {
                 globalData = JSON.parse(savedData);
-                globalAssets = Number(savedAssets);
+                globalAssetsRaw = JSON.parse(savedAssetsRaw);
+                globalAssets = Number(savedAssetsVal);
                 if(savedCoupang) coupangMatches = JSON.parse(savedCoupang);
                 updateDashboard();
             }
         };
 
-        // 데이터 초기화 버튼
         document.getElementById('clearDataBtn').addEventListener('click', () => {
-            if(confirm("저장된 엑셀 데이터를 모두 지우시겠습니까?")) {
-                localStorage.removeItem('mySavedLedgerData');
-                localStorage.removeItem('mySavedAssets');
-                localStorage.removeItem('mySavedCoupang');
+            if(confirm("저장된 가계부 데이터를 모두 초기화하시겠습니까?")) {
+                localStorage.clear();
                 location.reload();
             }
         });
 
-        // 탭 전환
+        // 엑셀 내보내기 기능
+        document.getElementById('exportExcelBtn').addEventListener('click', () => {
+            if(globalData.length === 0) return alert('내보낼 데이터가 없습니다.');
+            
+            const wb = XLSX.utils.book_new();
+            
+            // 뱅샐현황 시트 복구
+            const wsAssets = XLSX.utils.aoa_to_sheet(globalAssetsRaw);
+            XLSX.utils.book_append_sheet(wb, wsAssets, "뱅샐현황");
+
+            // 수정한 가계부 내역 시트
+            const wsLedger = XLSX.utils.json_to_sheet(globalData);
+            XLSX.utils.book_append_sheet(wb, wsLedger, "가계부 내역");
+
+            XLSX.writeFile(wb, "수정된_우리부부_가계부.xlsx");
+        });
+
         document.getElementById('navMonthly').addEventListener('click', () => switchTab('monthly'));
         document.getElementById('navAnnual').addEventListener('click', () => { switchTab('annual'); renderAnnual(); });
 
@@ -190,18 +215,21 @@
             setTimeout(() => { sankeyInstance.resize(); annualBarInstance.resize(); annualPieInstance.resize(); }, 100);
         }
 
-        // 파일 업로드 및 자동 저장
         document.getElementById('fileUpload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             const reader = new FileReader();
             reader.onload = function(e) {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                parseExactAssets(workbook.Sheets['뱅샐현황']);
+                
+                // 원본 데이터를 그대로 유지하기 위해 2D 배열로 저장
+                globalAssetsRaw = XLSX.utils.sheet_to_json(workbook.Sheets['뱅샐현황'], {header: 1, defval: ""});
+                parseExactAssets(globalAssetsRaw);
+                
                 globalData = XLSX.utils.sheet_to_json(workbook.Sheets['가계부 내역']);
                 
-                // 브라우저 저장소에 데이터 저장 (새로고침 시 유지)
                 localStorage.setItem('mySavedLedgerData', JSON.stringify(globalData));
+                localStorage.setItem('mySavedAssetsRaw', JSON.stringify(globalAssetsRaw));
                 localStorage.setItem('mySavedAssets', globalAssets);
                 
                 updateDashboard();
@@ -209,21 +237,16 @@
             reader.readAsArrayBuffer(file);
         });
 
-        function parseExactAssets(sheet) {
-            if (!sheet) return;
-            const data = XLSX.utils.sheet_to_json(sheet, {header: "A", defval: ""});
-            let total = 0;
-            let inFinance = false;
-
-            for (let i = 0; i < data.length; i++) {
-                let row = data[i];
+        function parseExactAssets(aoaData) {
+            let total = 0; let inFinance = false;
+            for (let i = 0; i < aoaData.length; i++) {
+                let row = aoaData[i];
                 let rowStr = JSON.stringify(row).replace(/\s+/g, '');
-                
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
                 if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) { break; }
 
                 if (inFinance) {
-                    let valRaw = row["E"];
+                    let valRaw = row[4]; // E열
                     if (valRaw !== undefined && valRaw !== "") {
                         let val = Number(String(valRaw).replace(/,/g, ''));
                         if (!isNaN(val) && val > 0 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
@@ -249,12 +272,9 @@
                 const dateMatch = line.match(/(\d{2,4})[./-](\d{1,2})[./-](\d{1,2})/);
                 if(dateMatch) {
                     let itemDesc = line.replace(dateMatch[0], '').replace(/[0-9,]+원?/, '').trim();
-                    if(itemDesc) {
-                        coupangMatches.push({ month: parseInt(dateMatch[2]), day: parseInt(dateMatch[3]), item: itemDesc.substring(0, 15) });
-                    }
+                    if(itemDesc) { coupangMatches.push({ month: parseInt(dateMatch[2]), day: parseInt(dateMatch[3]), item: itemDesc.substring(0, 15) }); }
                 }
             });
-            // 쿠팡 매칭 데이터도 로컬 스토리지에 저장
             localStorage.setItem('mySavedCoupang', JSON.stringify(coupangMatches));
             alert(`${coupangMatches.length}건의 쿠팡 내역이 매칭되었습니다.`);
             updateDashboard();
@@ -274,7 +294,6 @@
             let nextM = String(m === 12 ? 1 : m + 1).padStart(2, '0');
             document.getElementById('cycleLabel').innerText = `(${prevM}.10 ~ ${nextM}.09)`;
 
-            // ⭐ 자산 표기 시 Math.round()를 적용하여 소수점 완벽 절사
             const finalAsset = Math.round(globalAssets + getMilitaryAidAsset(y, m));
             document.getElementById('totalAsset').innerText = finalAsset.toLocaleString() + ' 원';
 
@@ -284,9 +303,9 @@
             let income = 0; let fixedExp = 0; let varExp = 0;
             currentMonthExpenses = {}; 
             currentFilteredData = [];
-            let catSet = new Set(['전체']);
+            let catSet = new Set(['전체', '고정지출', '변동지출']);
 
-            globalData.forEach(row => {
+            globalData.forEach((row, index) => {
                 let dStr = row['날짜'];
                 let dateObj = typeof dStr === 'number' ? new Date(Math.round((dStr - 25569) * 86400 * 1000)) : new Date(dStr);
                 
@@ -306,7 +325,9 @@
                     } else if (type === '지출') {
                         amount = Math.abs(amount);
                         
-                        if (FIXED_CATEGORIES.includes(cat)) fixedExp += amount;
+                        // 고정/변동 판별 (로컬스토리지 기준)
+                        let isFixed = userFixedCats.includes(cat);
+                        if (isFixed) fixedExp += amount;
                         else varExp += amount;
 
                         currentMonthExpenses[cat] = (currentMonthExpenses[cat] || 0) + amount;
@@ -315,26 +336,66 @@
                         let desc = String(row['내용']);
                         if(desc.includes('쿠팡') && coupangMatches.length > 0) {
                             let match = coupangMatches.find(c => c.month === (dateObj.getMonth() + 1) && c.day === dateObj.getDate());
-                            if(match) desc = `<span class="text-blue-600 font-bold">[${match.item}]</span> ` + desc;
+                            if(match) desc = `[${match.item}] ` + desc;
                         }
 
-                        currentFilteredData.push({ date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, cat: cat, desc: desc, amount: Math.round(amount) });
+                        currentFilteredData.push({ 
+                            globalIndex: index, // 원본 수정을 위한 인덱스 저장
+                            date: `${dateObj.getMonth()+1}/${dateObj.getDate()}`, 
+                            cat: cat, 
+                            desc: desc, 
+                            amount: Math.round(amount),
+                            isFixed: isFixed
+                        });
                     }
                 }
             });
 
-            // 수입 및 지출 소수점 제거 적용
             document.getElementById('totalIncome').innerText = Math.round(income).toLocaleString() + ' 원';
             document.getElementById('fixedExpense').innerText = Math.round(fixedExp).toLocaleString() + ' 원';
             document.getElementById('varExpense').innerText = Math.round(varExp).toLocaleString() + ' 원';
 
             const filterEl = document.getElementById('tableFilter');
-            filterEl.innerHTML = '';
-            catSet.forEach(c => filterEl.innerHTML += `<option value="${c}">${c}</option>`);
+            let currentFilter = filterEl.value; // 유지
+            filterEl.innerHTML = `<option value="전체">전체 보기</option><option value="고정지출">📌 고정지출만</option><option value="변동지출">📊 변동지출만</option><option disabled>──────────</option>`;
+            catSet.forEach(c => {
+                if(!['전체','고정지출','변동지출'].includes(c)) filterEl.innerHTML += `<option value="${c}">${c}</option>`;
+            });
+            if(Array.from(filterEl.options).some(o => o.value === currentFilter)) filterEl.value = currentFilter;
 
             renderBudgetUI(y, m);
             renderSankey(Math.round(income), Math.round(fixedExp + varExp), currentMonthExpenses);
-            renderTable('전체');
+            renderTable(filterEl.value);
+        }
+
+        // ⭐ 카테고리 고정/변동 영구 전환
+        window.toggleFixedCat = function(cat) {
+            if(userFixedCats.includes(cat)) {
+                userFixedCats = userFixedCats.filter(c => c !== cat);
+            } else {
+                userFixedCats.push(cat);
+            }
+            localStorage.setItem('userFixedCats', JSON.stringify(userFixedCats));
+            updateDashboard();
+        }
+
+        // ⭐ 지출 내역 직접 수정
+        window.editTransaction = function(idx, fieldName, isAmount) {
+            let row = globalData[idx];
+            let oldVal = isAmount ? Math.abs(row[fieldName]) : row[fieldName];
+            let newVal = prompt(`새로운 값을 입력하세요 (${fieldName}):`, oldVal);
+            
+            if(newVal !== null && newVal.trim() !== '') {
+                if(isAmount) {
+                    newVal = Number(newVal);
+                    if(isNaN(newVal)) return alert("숫자만 입력 가능합니다.");
+                    // 지출의 경우 엑셀 원본엔 음수로 저장되므로 원상복구
+                    if (row['타입'] === '지출' && newVal > 0) newVal = -newVal;
+                }
+                globalData[idx][fieldName] = newVal;
+                localStorage.setItem('mySavedLedgerData', JSON.stringify(globalData));
+                updateDashboard();
+            }
         }
 
         function renderTable(filterCat) {
@@ -342,7 +403,11 @@
             const tbody = document.getElementById('transactionTableBody');
             tbody.innerHTML = '';
             
-            const filtered = filterCat === '전체' ? currentFilteredData : currentFilteredData.filter(d => d.cat === filterCat);
+            let filtered = [];
+            if(filterCat === '전체') filtered = currentFilteredData;
+            else if(filterCat === '고정지출') filtered = currentFilteredData.filter(d => d.isFixed);
+            else if(filterCat === '변동지출') filtered = currentFilteredData.filter(d => !d.isFixed);
+            else filtered = currentFilteredData.filter(d => d.cat === filterCat);
             
             if(filtered.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-gray-400">내역이 없습니다.</td></tr>`;
@@ -355,12 +420,16 @@
             });
 
             filtered.forEach(row => {
+                let badgeClass = row.isFixed ? "bg-orange-100 text-orange-700 border border-orange-200" : "bg-blue-50 text-blue-600 border border-blue-200";
+                
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0">
                         <td class="p-2 text-gray-500">${row.date}</td>
-                        <td class="p-2"><span class="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-[10px]">${row.cat}</span></td>
-                        <td class="p-2 text-gray-800 truncate max-w-[120px]">${row.desc}</td>
-                        <td class="p-2 text-right font-bold text-red-500">-${row.amount.toLocaleString()}</td>
+                        <td class="p-2">
+                            <span onclick="toggleFixedCat('${row.cat}')" class="cat-badge px-2 py-0.5 rounded text-[10px] font-bold ${badgeClass}" title="눌러서 고정/변동 전환">${row.cat}</span>
+                        </td>
+                        <td class="p-2 text-gray-800 truncate max-w-[120px] editable-cell" onclick="editTransaction(${row.globalIndex}, '내용', false)" title="눌러서 이름 수정">${row.desc}</td>
+                        <td class="p-2 text-right font-bold text-red-500 editable-cell" onclick="editTransaction(${row.globalIndex}, '금액', true)" title="눌러서 금액 수정">-${row.amount.toLocaleString()}</td>
                     </tr>
                 `;
             });
@@ -370,8 +439,7 @@
 
         window.filterByCategory = function(cat) {
             const filterEl = document.getElementById('tableFilter');
-            let exists = Array.from(filterEl.options).some(opt => opt.value === cat);
-            if (exists) {
+            if (['전체', '고정지출', '변동지출'].includes(cat) || Array.from(filterEl.options).some(opt => opt.value === cat)) {
                 renderTable(cat);
             } else {
                 renderTable('전체');
@@ -379,6 +447,7 @@
             document.getElementById('transactionTableSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 
+        // --- 이하 차트 및 예산 관리 로직 (기존 동일) --- //
         document.getElementById('toggleBudgetBtn').addEventListener('click', () => {
             const area = document.getElementById('budgetSetupArea');
             area.classList.toggle('hide');
@@ -464,11 +533,8 @@
             sankeyInstance.on('click', function (params) {
                 if (params.dataType === 'node') {
                     let name = params.name.replace('\u200B', ''); 
-                    if (name === '지출' || name === '수입' || name === '잔여/저축' || name === '초과지출') {
-                        filterByCategory('전체');
-                    } else {
-                        filterByCategory(name);
-                    }
+                    if (name === '지출' || name === '수입' || name === '잔여/저축' || name === '초과지출') filterByCategory('전체');
+                    else filterByCategory(name);
                 }
             });
         }
