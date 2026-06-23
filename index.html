@@ -134,7 +134,7 @@
         <div id="tab-annual" class="p-5 space-y-6 hide">
             <div class="mb-4">
                 <h2 class="text-2xl font-bold text-gray-800">연간 결산 리포트</h2>
-                <p class="text-sm text-gray-500">업로드된 데이터(1년 치) 종합 분석</p>
+                <p class="text-sm text-gray-500">업로드된 데이터 전체 흐름 요약</p>
             </div>
             
             <div class="grid grid-cols-2 gap-3">
@@ -196,7 +196,6 @@
         let currentFilteredData = [];
         let coupangMatches = [];
 
-        // 커스텀 고정지출 키워드
         let userFixedKeywords = JSON.parse(localStorage.getItem('userFixedKeywords')) || ['주거/통신', '금융/보험', '교육', '대출/이자'];
 
         const sankeyInstance = echarts.init(document.getElementById('sankeyChart'));
@@ -219,7 +218,7 @@
         };
 
         document.getElementById('clearDataBtn').addEventListener('click', () => {
-            if(confirm("저장된 가계부 데이터와 설정된 고정지출 키워드를 모두 초기화하시겠습니까?")) {
+            if(confirm("모든 데이터를 초기화하시겠습니까?")) {
                 localStorage.clear();
                 location.reload();
             }
@@ -264,34 +263,31 @@
             reader.readAsArrayBuffer(file);
         });
 
-        // ⭐ 철갑 방어를 씌운 스마트 자산 파싱 로직
+        // ⭐ 오만함은 버리고 무식하고 가장 확실하게 짠 자산 파싱 로직
         function parseExactAssets(aoaData) {
-            let total = 0; let inFinance = false; let assetColIdx = -1;
+            let total = 0; 
+            let inFinance = false;
+
             for (let i = 0; i < aoaData.length; i++) {
-                let row = aoaData[i] || [];
-                let rowStr = JSON.stringify(row).replace(/\s+/g, '');
+                let row = aoaData[i];
+                if (!row) continue;
+                
+                let rowStr = String(row.join('')).replace(/\s+/g, '');
                 
                 if (rowStr.includes('3.재무현황')) { inFinance = true; continue; }
+                // 4.보험현황이나 5.투자현황이 나오면 자산 긁어오기 종료
                 if (rowStr.includes('4.보험현황') || rowStr.includes('5.투자현황') || rowStr.includes('6.대출현황')) break;
 
                 if (inFinance) {
-                    // 항목, 상품명, 금액이 나오는 헤더 줄을 찾아서 정확한 '금액' 기둥 번호를 스캔
-                    if (rowStr.includes('항목') && rowStr.includes('금액') && assetColIdx === -1) {
-                        for(let c=0; c<row.length; c++) {
-                            if(String(row[c]).trim() === '금액') {
-                                assetColIdx = c;
-                                break;
-                            }
-                        }
-                        continue;
-                    }
-                    
-                    // 찾아낸 기둥 번호로만 핀포인트 합산 (칸이 밀려도 무적)
-                    if (assetColIdx !== -1 && !rowStr.includes('총자산') && !rowStr.includes('순자산') && !rowStr.includes('총계')) {
-                        let valRaw = row[assetColIdx];
-                        if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
-                            let val = Number(String(valRaw).replace(/,/g, ''));
-                            if (!isNaN(val) && val > 0) total += val;
+                    // 요약행 스킵
+                    if (rowStr.includes('총자산') || rowStr.includes('순자산') || rowStr.includes('총계') || rowStr.includes('항목')) continue;
+
+                    // 뱅크샐러드 엑셀의 자산 금액은 무조건 E열(index 4)에 적힘. 절대 안 밀림.
+                    let valRaw = row[4];
+                    if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
+                        let val = Number(String(valRaw).replace(/,/g, '').trim());
+                        if (!isNaN(val) && val > 0) {
+                            total += val;
                         }
                     }
                 }
@@ -317,7 +313,7 @@
                 }
             });
             localStorage.setItem('mySavedCoupang', JSON.stringify(coupangMatches));
-            alert(`${coupangMatches.length}건의 쿠팡 내역이 매칭되었습니다.`);
+            alert(`${coupangMatches.length}건의 매칭 완료`);
             updateDashboard();
         });
 
@@ -366,8 +362,6 @@
                         amount = Math.abs(amount);
                         
                         let rawDesc = String(row['내용']);
-                        
-                        // 키워드 기반 고정/변동 판별
                         let isFixed = false;
                         for (let kw of userFixedKeywords) {
                             if (rawDesc.includes(kw) || cat.includes(kw)) {
@@ -428,13 +422,13 @@
             }
 
             if (matchedKw) {
-                if(confirm(`이 항목은 [${matchedKw}] 키워드로 인해 영구 고정지출로 묶여 있습니다.\n해제하시겠습니까?`)) {
+                if(confirm(`이 항목은 [${matchedKw}] 키워드로 고정지출 설정되어 있습니다.\n해제하시겠습니까?`)) {
                     userFixedKeywords = userFixedKeywords.filter(k => k !== matchedKw);
                     localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
                     updateDashboard();
                 }
             } else {
-                let newKw = prompt(`고정지출로 묶을 공통 키워드(단어)를 입력하세요.\n예: '4월 전기요금' -> '전기요금'`, rawDesc);
+                let newKw = prompt(`고정지출로 영구 분류할 키워드(단어)를 입력하세요.\n예: '4월 전기요금' -> '전기요금'`, rawDesc);
                 if (newKw !== null && newKw.trim() !== '') {
                     userFixedKeywords.push(newKw.trim());
                     localStorage.setItem('userFixedKeywords', JSON.stringify(userFixedKeywords));
@@ -527,6 +521,7 @@
             const allCats = Array.from(new Set([...Object.keys(currentMonthExpenses), ...Object.keys(saved)]));
             const container = document.getElementById('budgetInputs');
             container.innerHTML = '';
+            
             allCats.forEach(cat => {
                 container.innerHTML += `
                     <div class="flex items-center gap-2 mb-2">
@@ -602,7 +597,7 @@
             });
         }
 
-        // ⭐ 새롭게 탄생한 연간 결산 로직 (8개 기능 탑재)
+        // ⭐ 연간 결산 로직 완벽 업데이트
         function renderAnnual() {
             if(globalData.length === 0) return;
             
@@ -629,29 +624,23 @@
                     amount = Math.abs(amount);
                     totalExp += amount;
 
-                    // 고정지출 합산
                     let isFixed = userFixedKeywords.some(kw => desc.includes(kw) || cat.includes(kw));
                     if(isFixed) totalFixed += amount;
 
-                    // 육아 & 자동차비
                     if(cat === '자녀/육아') totalBaby += amount;
                     if(cat === '자동차' || cat === '교통/차량') totalCar += amount;
 
-                    // 식비 구조 (배달/외식 vs 마트/장보기)
                     if(subCat.includes('배달') || subCat.includes('외식')) dining += amount;
                     else if(subCat.includes('마트') || subCat.includes('부식') || subCat.includes('식재료')) grocery += amount;
-                    else if(cat === '식비') dining += amount; // 애매하면 외식으로
+                    else if(cat === '식비') dining += amount;
 
-                    // 가맹점 랭킹용 (괄호나 특수문자 일부 제거하여 클린하게)
                     let cleanDesc = desc.replace(/\[.*?\]|\(주\)|\(.*\)/g, '').trim();
                     if(cleanDesc) merchants[cleanDesc] = (merchants[cleanDesc] || 0) + amount;
 
-                    // 주말/평일 계산
                     let day = dateObj.getDay();
                     if(day === 0 || day === 6) weekendExp += amount;
                     else weekdayExp += amount;
 
-                    // 분기 계산
                     let month = dateObj.getMonth() + 1;
                     if(month <= 3) quarterlyExp['1분기'] += amount;
                     else if(month <= 6) quarterlyExp['2분기'] += amount;
@@ -660,7 +649,6 @@
                 }
             });
 
-            // 1. KPI 요약 업데이트
             let surplus = totalInc - totalExp;
             let savingsRate = totalInc > 0 ? (surplus / totalInc * 100).toFixed(1) : 0;
             
@@ -675,7 +663,6 @@
             let groceryPct = foodTotal > 0 ? Math.round((grocery / foodTotal) * 100) : 0;
             document.getElementById('annualFoodCompare').innerHTML = `<span class="text-red-500">배달/외식: ${diningPct}%</span><br><span class="text-green-600">장보기: ${groceryPct}%</span>`;
 
-            // 2. 가맹점 TOP 5
             let sortedMerchants = Object.keys(merchants).map(k => ({name: k, val: merchants[k]})).sort((a,b)=>b.val-a.val).slice(0,5);
             let merchantHTML = '';
             sortedMerchants.forEach((m, idx) => {
@@ -683,7 +670,6 @@
             });
             document.getElementById('topMerchantsList').innerHTML = merchantHTML || '<p class="text-xs text-gray-400">데이터 없음</p>';
 
-            // 3. 주말 vs 평일 파이 차트
             annualPieInstance.setOption({
                 tooltip: { trigger: 'item' },
                 series: [{
@@ -695,7 +681,6 @@
                 }]
             });
 
-            // 4. 분기별 트렌드 바 차트
             annualBarInstance.setOption({
                 tooltip: { trigger: 'axis' },
                 xAxis: { type: 'category', data: Object.keys(quarterlyExp) },
